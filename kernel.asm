@@ -14,6 +14,7 @@ sect2:
   msg2 db "Hello, World!", 13, 10, 0
 
 print:
+  pop si
   mov ah, 0eh
   mov cx, 1
   mov bh, 0
@@ -25,4 +26,3 @@ print_loop:
   jmp print_loop
 print_exit:
   ret
-

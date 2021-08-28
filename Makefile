@@ -1,4 +1,4 @@
-disk.img: boot kernel
+disk.img: boot.bin kernel.bin
 	cat boot.bin kernel.bin > disk.img
 
 boot.bin: boot.asm
