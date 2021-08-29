@@ -16,20 +16,16 @@ cmd_loop:
   push newline
   call print
 
-  push user_cmd
-  push cmd_help_text
-  push 4
-  call strcmp
-
-  cmp ax, 1
+  mov si, user_cmd
+  mov di, cmd_help_text
+  mov cx, 4
+  rep cmpsb
   je cmd_help
 
-  push user_cmd
-  push cmd_clear_text
-  push 5
-  call strcmp
-
-  cmp ax, 1
+  mov si, user_cmd
+  mov di, cmd_clear_text
+  mov cx, 5
+  rep cmpsb
   je cmd_clear
 
   push cmd_err
@@ -95,36 +91,6 @@ print_loop:
   int 10h
   jmp print_loop
 print_exit:
-  pop bp
-  ret
-
-; strcmp(length, str1, str2)
-strcmp:
-  push bp
-  mov bp, sp
-  mov si, [bp + 6]
-  mov di, [bp + 8]
-  mov word [bp - 2], 0
-strcmp_loop:
-  mov ax, [bp + 4]
-  cmp [bp - 2], ax
-  je strcmp_equal
-
-  lodsb
-
-  cmp [di], al
-  jne strcmp_notequal
-
-  inc di
-  inc word [bp - 2]
-  jmp strcmp_loop
-
-strcmp_equal:
-  mov ax, 1
-  jmp strcmp_exit
-strcmp_notequal:
-  mov ax, 0
-strcmp_exit:
   pop bp
   ret
 
