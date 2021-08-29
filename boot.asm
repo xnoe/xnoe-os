@@ -101,8 +101,6 @@ kernel_loader:
   mov bx, word [pointer]
 
   mov al, byte [cluster]
-  mov word [buffer+20h], ax
-
   add al, 34
 
   mov cl, al
@@ -117,8 +115,9 @@ kernel_loader:
   add word [pointer], 512
 
   mov si, word [cluster]
+  shl si, 1
   add si, buffer
-  add si, 1
+;  add si, 1
   cmp word [si], 0ffffh
   je kernel_loaded
 
@@ -126,7 +125,10 @@ kernel_loader:
   jmp kernel_loader
 
 kernel_loaded:
-  mov dword [buffer], 0xdeadbeef
+  ; Pass boot device to the kernel
+  xor ax, ax
+  mov al, byte [drive]
+  push ax
   jmp 2000h:0h
 
 _boot_print:
