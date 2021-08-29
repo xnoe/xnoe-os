@@ -1,9 +1,16 @@
 [BITS 16]
+  ; Update the IVT with our interrupt handler
+  mov bx, 0
+  mov ds, bx
+  mov word [ds:136], ihdlr
+  mov word [ds:138], cs
+
   mov ax, 2000h
   mov ds, ax
 
   pop ax
   mov byte [bootdisk], al
+
   ; Set up kernel specifics
 
   ; Root Directory Entries will be at 2000h:2000h
@@ -365,3 +372,27 @@ decode_filename_final:
 
 _decode_buffer:
   times 11 db 0
+
+ihdlr:
+  pop word [_ihdlr_stack0]
+  pop word [_ihdlr_stack1]
+  pop word [_ihdlr_stack2]
+
+  cmp ah, 01h
+  jne _ihdlr_2
+  call print
+_ihdlr_2:
+  cmp ah, 02h
+  jne _ihdlr_3
+  call readline
+_ihdlr_3:
+  
+
+  push word [_ihdlr_stack2]
+  push word [_ihdlr_stack1]
+  push word [_ihdlr_stack0]
+  iret
+
+_ihdlr_stack0 dw 0
+_ihdlr_stack1 dw 0
+_ihdlr_stack2 dw 0
