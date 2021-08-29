@@ -2,12 +2,54 @@
   mov ax, 2000h
   mov ds, ax
 
+  pop ax
+  mov byte [bootdisk], al
+  ; Set up kernel specifics
+
+  ; Root Directory Entries will be at 2000h:2000h
+  ; FAT1 will be at 2000h:4000h
+
+  mov ax, 2000h
+  mov es, ax
+  mov bx, 2000h
+  mov ah, 2
+  mov al, 16
+  mov cl, 20
+  mov ch, 0
+  mov dh, 0
+  mov dl, [bootdisk]
+
+  ; Load sectors 20 through 36 to 2000h:2000h
+  int 13h
+
+  mov ax, 2000h
+  mov es, ax
+  mov bx, 4000h
+  mov ah, 2
+  mov al, 9
+  mov cl, 2
+  mov ch, 0
+  mov dh, 0
+  mov dl, [bootdisk]
+  
+  ; Load sectors 2 through 11 to 2000h:4000h
+  int 13h
+
   push msg
   call print
 
 cmd_loop:
   push cmd_prompt
   call print
+
+  ; Clear command buffer
+  mov al, 0
+  mov di, user_cmd
+  mov cx, 64
+
+clear_loop:
+  stosb
+  loop clear_loop
 
   push user_cmd
   push 64
@@ -28,6 +70,44 @@ cmd_loop:
   rep cmpsb
   je cmd_clear
 
+  ; If the user hasn't run a command we should determine if they're trying to run a program.
+
+  ; Decode input to filename
+  push user_cmd
+  call decode_filename
+
+  ; Search for file
+
+
+  mov si, ax
+  call file_exists
+  ; If it doesn't exist jump to error
+  cmp ax, 0
+  je handle_error
+
+  ; If the file exists load it at 3000h:0
+  push ax
+  push 0
+  push 3000h
+  call load_file
+
+  ; Make a call to 3000h:0
+  call 3000h:0
+  ; We've now returned.
+
+
+
+  ; Recover ds
+  mov ax, 2000h
+  mov ds, ax
+  mov es, ax
+
+;  jmp $
+
+  ; Loop
+  jmp cmd_loop
+
+handle_error:
   push cmd_err
   call print
 
@@ -64,12 +144,16 @@ cmd_clear:
 data:
   msg db "Kernel OK!", 13, 10, 0
   cmd_prompt db ">>> ", 0
-  cmd_err db "Bad Command!", 13, 10, 13, 10, 0
+  cmd_err db "Bad Command or filename!", 13, 10, 13, 10, 0
   
   cmd_help_text db "help"
   cmd_clear_text db "clear"
 
   newline db 13, 10, 0
+
+  bootdisk db 0
+
+  program_two db "HELLO   BIN"
 
 
 
@@ -92,7 +176,7 @@ print_loop:
   jmp print_loop
 print_exit:
   pop bp
-  ret
+  ret 2
 
 ; readline(max length, buffer)
 readline:
@@ -145,4 +229,139 @@ readline_backspace:
 
 readline_exit:
   pop bp
+  ret 4
+
+file_exists:
+  push si
+
+  mov bp, sp
+  mov cx, 256 ; Hardcode the amount of entries for now
+  mov ax, ds
+  mov es, ax
+
+  mov ax, 0
+file_exists_loop:
+  pop si ; Get value in to si
+  push si ; Keep track of original value
+
+  xchg cx, dx
+
+  mov di, 2000h ; Root Entries is at 2000h:2000h
+  add di, ax
+  mov cx, 11
+  rep cmpsb
+  je file_exists_found
+
+  add ax, 32
+
+  xchg cx, dx
+  loop file_exists_loop
+file_exists_not_found:
+  mov ax, 0
+  pop si
   ret
+file_exists_found:
+  mov ax, [es:di+0fh]
+  pop si
+  ret
+
+; loadfile(segment, offset, initsector)
+load_file:
+  push bp
+  mov bp, sp
+  mov ax, word [bp + 4]
+  mov word [_load_segment], ax
+  mov ax, word [bp + 6]
+  mov word [_load_pointer], ax
+  mov ax, word [bp + 8]
+  mov word [_load_cluster], ax
+
+  mov ax, word [_load_segment]
+  mov es, ax
+
+load_file_loop:
+  mov bx, word [_load_pointer]
+
+  mov al, byte [_load_cluster]
+  add al, 34
+
+  mov cl, al
+  mov al, 1
+  mov ah, 2
+  mov ch, 0
+  mov dh, 0
+  mov dl, byte [bootdisk]
+
+  int 13h
+
+  add word [_load_pointer], 512
+
+  mov si, word [_load_cluster]
+  shl si, 1
+  add si, 4000h
+;  add si, 1
+  cmp word [ds:si], 0ffffh
+  je load_file_loaded
+
+  add word [_load_cluster], 1
+  jmp load_file_loop
+
+load_file_loaded:
+  pop bp
+  ret 6
+
+_load_pointer dw 0
+_load_cluster dw 0
+_load_segment dw 0
+
+decode_filename: 
+  push bp
+  mov bp, sp
+  push word [bp + 4]
+  ; First we want to clear the buffer with 0x20s
+  mov al, 20h
+  mov cx, 11
+  mov di, _decode_buffer
+decode_clear_loop:
+  stosb
+  loop decode_clear_loop
+
+  pop si
+
+
+  mov cx, 8
+  mov bx, 0
+decode_filename_loop:
+
+  lodsb
+  cmp al, "."
+  je decode_filename_stage2
+  mov byte [_decode_buffer+bx], al
+
+  inc bx
+
+  loop decode_filename_loop
+
+decode_filename_stage2:
+  mov bx, 8
+  mov cx, 3
+;  add si, 1
+
+decode_filename_stage2_loop:
+
+  lodsb
+  cmp al, 0
+  je decode_filename_final
+  mov byte [_decode_buffer+bx], al
+
+  inc bx
+
+  loop decode_filename_stage2_loop
+
+decode_filename_final:
+  pop bp
+  mov ax, _decode_buffer
+  ret 2
+
+_decode_buffer:
+  times 11 db 0
