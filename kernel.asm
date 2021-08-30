@@ -179,6 +179,13 @@ print_loop:
   lodsb
   cmp al, 0
   je print_exit
+  ; Use Unix Line endings (\n)
+  cmp al, 10
+  jne _print_skip
+  int 10h
+  mov al, 13
+  int 10h
+_print_skip:
   int 10h
   jmp print_loop
 print_exit:
@@ -243,10 +250,11 @@ file_exists:
 
   mov bp, sp
   mov cx, 256 ; Hardcode the amount of entries for now
-  mov ax, ds
+
+  mov ax, 2000h
   mov es, ax
 
-  mov ax, 0
+  xor ax, ax
 file_exists_loop:
   pop si ; Get value in to si
   push si ; Keep track of original value
@@ -276,6 +284,10 @@ file_exists_found:
 load_file:
   push bp
   mov bp, sp
+
+  push ds
+  mov ax, 2000h
+  mov ds, ax
 
   mov ax, word [bp + 4]
   mov es, ax
@@ -308,6 +320,7 @@ load_file_loop:
   jmp load_file_loop
 
 load_file_loaded:
+  pop ds
   pop bp
   ret 6
 
@@ -368,11 +381,27 @@ ihdlr:
   jne _ihdlr_2
   push si
   call print
+  jmp _ihdlr_fin
 _ihdlr_2:
   cmp ah, 02h
   jne _ihdlr_3
   push si
   push di
   call readline
+  jmp _ihdlr_fin
 _ihdlr_3:
+  cmp ah, 03h
+  jne _ihdlr_4
+  push si
+  push di
+  push bx
+  call load_file
+  jmp _ihdlr_fin
+_ihdlr_4:
+  cmp ah, 04h
+  jne _ihdlr_5
+  call file_exists
+  jmp _ihdlr_fin
+_ihdlr_5:
+_ihdlr_fin:
   iret
