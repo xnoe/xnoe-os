@@ -276,20 +276,14 @@ file_exists_found:
 load_file:
   push bp
   mov bp, sp
-  mov ax, word [bp + 4]
-  mov word [_load_segment], ax
-  mov ax, word [bp + 6]
-  mov word [_load_pointer], ax
-  mov ax, word [bp + 8]
-  mov word [_load_cluster], ax
 
-  mov ax, word [_load_segment]
+  mov ax, word [bp + 4]
   mov es, ax
 
 load_file_loop:
-  mov bx, word [_load_pointer]
+  mov bx, word [bp + 6]
 
-  mov al, byte [_load_cluster]
+  mov al, byte [bp + 8]
   add al, 34
 
   mov cl, al
@@ -301,25 +295,21 @@ load_file_loop:
 
   int 13h
 
-  add word [_load_pointer], 512
+  add word [bp + 6], 512
 
-  mov si, word [_load_cluster]
+  mov si, word [bp + 8]
   shl si, 1
   add si, 4000h
 ;  add si, 1
   cmp word [ds:si], 0ffffh
   je load_file_loaded
 
-  add word [_load_cluster], 1
+  add word [bp + 8], 1
   jmp load_file_loop
 
 load_file_loaded:
   pop bp
   ret 6
-
-_load_pointer dw 0
-_load_cluster dw 0
-_load_segment dw 0
 
 decode_filename: 
   push bp
