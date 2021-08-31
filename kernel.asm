@@ -92,15 +92,22 @@ clear_loop:
   cmp ax, 0
   je handle_error
 
-  ; If the file exists load it at 3000h:0
+  ; Define the segment where we will load our programs
+  program_segment equ 4000h
+
+  ; If the file exists load it at program_segment:0
   push ax
   push 0
-  push 3000h
+  push program_segment
   call load_file
 
-  ; Make a call to 3000h:0
-  call 3000h:0
+  ; Let programs know what segment they're loaded at
+  push program_segment
+  ; Make a call to program_segment:0
+  call program_segment:0
   ; We've now returned.
+  ; Clean up pushed segment
+  pop ax
 
 
 
