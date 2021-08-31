@@ -160,8 +160,8 @@ data:
   cmd_prompt db ">>> ", 0
   cmd_err db "Bad Command or filename!", 13, 10, 13, 10, 0
   
-  cmd_help_text db "help"
-  cmd_clear_text db "clear"
+  cmd_help_text db "HELP"
+  cmd_clear_text db "CLEAR"
 
   newline db 13, 10, 0
 
@@ -215,6 +215,13 @@ readline_loop:
   cmp ah, 0eh
   je readline_backspace
 
+  ; Process all user input as upper case
+  cmp al, 0x61
+  jl not_lower
+  cmp al, 0x79
+  jg not_lower
+  and al, 223
+not_lower:
   mov byte [di], al
   inc di
   inc bx
