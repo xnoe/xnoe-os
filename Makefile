@@ -1,4 +1,4 @@
-disk.img: boot.sector kernel.bin hello.bin print.bin hello.txt
+disk.img: boot.sector kernel.bin hello.bin print.bin hello.txt boot32.bin
 	dd if=/dev/zero of=disk.img count=43 bs=100k
 	dd if=boot.sector of=disk.img conv=notrunc
 	mount disk.img img.d
@@ -8,13 +8,16 @@ disk.img: boot.sector kernel.bin hello.bin print.bin hello.txt
 	chmod 777 disk.img
 
 boot.sector: boot.asm
-	nasm boot.asm -o $@
+	nasm $< -o $@
 
 kernel.bin: kernel.asm
-	nasm kernel.asm -o $@
+	nasm $< -o $@
 
 hello.bin: hello.asm
-	nasm hello.asm -o $@
+	nasm $< -o $@
 
 print.bin: print.asm
-	nasm print.asm -o $@
+	nasm $< -o $@
+
+boot32.bin: boot32.asm
+	nasm $< -o $@
