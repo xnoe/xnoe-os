@@ -1,28 +1,36 @@
-void clear_screen();
-void set_curpos(int x, int y);
-void print(const char* string);
+#include "types.h"
 
-unsigned char* VMEM_ADDR = (unsigned char*)0xb8000;
+uint8_t* VMEM_ADDR = (uint8_t*)0xb8000;
 const int TERM_WIDTH = 80;
 const int TERM_HEIGHT = 25;
 
 int cursor_x = 0;
 int cursor_y = 0;
 
-int main() {
-  asm(
-    "mov $0x10, %ax\n"
-    "mov %ax, %ds\n"
-    "mov %ax, %ss\n"
-    "mov $0x90000, %esp"
-  );
+void outb(uint16_t portnumber, uint8_t data) {
+  asm volatile("outb %0, %1" : : "a" (data), "Nd" (portnumber));
+}
+uint8_t inb(uint16_t portnumber) {
+  uint8_t result;
+  asm volatile("inb %1, %0" : "=a" (result) : "Nd" (portnumber));
+  return result;
+}
 
-  clear_screen();
-  set_curpos(0, 0);
+uint16_t get_cursor_position() {
+  uint16_t cursor_position = 0;
+  uint8_t* cursor_position_split = (uint8_t*)&cursor_position;
+  outb(0x3D4, 0x0F);
+  cursor_position_split[0] = inb(0x3D5);
+  outb(0x3D4, 0x0E);
+  cursor_position_split[1] = inb(0x3D5);
+  return cursor_position;
+}
 
-  print("Hello, World!\n\nWe are running XnoeOS Code in C now, Protected Mode has been achieved and everything is working super nicely!\n\nHow wonderful!\n\nNow I just need to hope my print function works properly too~~");
+void init_term() {
+  uint16_t cursor_position = get_cursor_position();
 
-  while (1) {}
+  cursor_y = cursor_position / TERM_WIDTH;
+  cursor_x = cursor_position % TERM_WIDTH;
 }
 
 void clear_screen()  {
@@ -55,4 +63,15 @@ void print(const char* string) {
       cursor_y++;
     }
   }
+}
+
+
+int main() {
+  init_term();
+
+  print("KERNEL32 OK!\n\n");
+
+  print("Hello, World!\n\nWe are running XnoeOS Code in C now, Protected Mode has been achieved and everything is working super nicely!\n\nHow wonderful!\n\nNow I just need to hope my print function works properly too~~");
+
+  while (1) {}
 }
