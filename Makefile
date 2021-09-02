@@ -1,8 +1,8 @@
-CFLAGS = -m32 -nostdlib -fno-builtin -fno-exceptions -fno-leading-underscore -fno-pie -fno-stack-protector
+CFLAGS = -m32 -mgeneral-regs-only -nostdlib -fno-builtin -fno-exceptions -fno-leading-underscore -fno-pie -fno-stack-protector -Wno-pointer-to-int-cast
 LDFLAGS = 
 
 DISK_IMG_FILES = kernel.bin hello.bin print.bin boot32.bin kernel32.bin
-KERNEL32_OBJS = screenstuff.o io.o kernel32_strap.o kernel32.o
+KERNEL32_OBJS = screenstuff.o io.o idt.o kernel32_strap.o kernel32.o
 
 run: disk.img
 	qemu-system-x86_64 disk.img
@@ -28,7 +28,7 @@ boot.sector: boot.asm
 kernel32.bin: kernel32.ld $(KERNEL32_OBJS)
 	ld $(LDFLAGS) -T $< $(KERNEL32_OBJS)
 
-kernel32_strap.o: kernel32_strap.asm
+%.o: %.asm
 	nasm -felf32 $< -o $@
 
 %.o: %.c
