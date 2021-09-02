@@ -42,6 +42,9 @@ void set_curpos_raw(int curpos) {
   outb(0x3D5, cursor_position_split[0]);
   outb(0x3D4, 0x0E);
   outb(0x3D5, cursor_position_split[1]);
+
+  cursor_x = (*(uint16_t*)cursor_position_split) % TERM_WIDTH;
+  cursor_y = (*(uint16_t*)cursor_position_split) / TERM_WIDTH;
 }
 
 void set_curpos(int x, int y) {
@@ -57,6 +60,8 @@ int int_to_decimal(unsigned int number, char* string_buffer) {
   
   int index = 9;
   unsigned int acc = number;
+  if (acc == 0)
+    string_buffer[index--] = '0';
   while (acc != 0) {
     string_buffer[index--] = 0x30+(acc%10);
     acc /= 10;
@@ -71,6 +76,8 @@ int int_to_hex(unsigned int number, char* string_buffer) {
   
   int index = 7;
   unsigned int acc = number;
+  if (acc == 0)
+    string_buffer[index--] = '0';
   while (acc != 0) {
     string_buffer[index--] = dec_to_hex[acc%0x10];
     acc /= 0x10;
@@ -125,6 +132,13 @@ void printf(const char* string, ...) {
           break;
         case 's':
           printf(va_arg(ptr, const char*));
+          break;
+        case 'c':
+          int mem_pos = cursor_y * TERM_WIDTH + cursor_x++;
+          int promoted = va_arg(ptr, int);
+          char charred = promoted;
+          VMEM_ADDR[mem_pos] = charred + (0x07<<8);
+          break;
       }
       continue;
     }
@@ -138,4 +152,9 @@ void printf(const char* string, ...) {
   set_curpos(cursor_x, cursor_y);
 
   va_end(ptr);
+}
+
+void non_moving_put(char chr) {
+  int mem_pos = cursor_y * TERM_WIDTH + cursor_x;
+  VMEM_ADDR[mem_pos] = chr + (0x07<<8);
 }

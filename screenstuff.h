@@ -14,5 +14,6 @@ void set_curpos(int x, int y);
 int int_to_decimal(unsigned int number, char* string_buffer);
 int int_to_hex(unsigned int number, char* string_buffer);
 void printf(const char* string, ...);
+void non_moving_put(char chr);
 
 #endif
