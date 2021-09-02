@@ -14,6 +14,11 @@ void set_entry(uint8_t interrupt_number, uint16_t code_segment, void* handler, u
   };
 }
 
+__attribute__((interrupt)) void interrupt_20(struct interrupt_frame* frame) {
+//  printf("Interrupt 20 received!!\n");
+  outb(0x20, 0x20);
+}
+
 __attribute__((interrupt)) void ignore_interrupt(struct interrupt_frame* frame) {
   // Do nothing
 }
@@ -23,6 +28,19 @@ void init_idt() {
   asm volatile("lidt %0" : : "m" (desc));
   for (int i=0; i<256; i++)
     set_entry(i, 0x08, &ignore_interrupt, 0x8E);
+  
+  set_entry(0x20, 0x08, &interrupt_20, 0x8E);
+
+  outb(0x20, 0x11);
+  outb(0xA0, 0x11);
+  outb(0x21, 0x20);
+  outb(0xA1, 0x28);
+  outb(0x21, 0x04);
+  outb(0xA1, 0x02);
+  outb(0x21, 0x01);
+  outb(0xA1, 0x01);
+  outb(0x21, 0x00);
+  outb(0xA1, 0x00);
 }
 
 void enable_idt() {

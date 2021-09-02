@@ -2,33 +2,50 @@
 #include "screenstuff.h"
 #include "io.h"
 #include "idt.h"
+#include "keyboard.h"
 
-__attribute__((interrupt)) void interrupt_21(struct interrupt_frame* frame) {
-  printf("Interrupt 20 received!!\n");
-  outb(0x20, 0x20);
+bool strcmp(char* a, char* b, int max) {
+  int index = 0;
+  while (index < max) {
+    if (a[index] != b[index])
+      return false;
+    index++;
+  }
+  return true;
 }
 
 int main() {
   init_idt();
-  set_entry(0x20, 0x08, &interrupt_21, 0x8E);
   init_term();
 
   printf("KERNEL32 OK!\n");
 
   printf("Hello, World!\n\nWe are running XnoeOS Code in C now, Protected Mode has been achieved and everything is working super nicely!\n\nHow wonderful!\n\nNow I just need to hope my print function works properly too~~\n");
 
-  outb(0x20, 0x11);
-  outb(0xA0, 0x11);
-  outb(0x21, 0x20);
-  outb(0xA1, 0x28);
-  outb(0x21, 0x04);
-  outb(0xA1, 0x02);
-  outb(0x21, 0x01);
-  outb(0xA1, 0x01);
-  outb(0x21, 0x00);
-  outb(0xA1, 0x00);
-
+  init_keyboard();
   enable_idt();
 
-  while (1);
+
+  while (1) {
+    printf(">>> ");
+    char buffer[128];
+    for (int i=0; i<128; i++)
+      buffer[i] = 0;
+    readline(128, buffer);
+
+    //printf("%s\n", buffer);
+    if (strcmp(buffer, "help", 4)) {
+      printf(
+        "XnoeOS 32 Bit Mode Help.\n"
+        "------------------------\n"
+        "- help\n"
+        ": Shows this message\n"
+        "- clear\n"
+        ": Clears the screen\n"
+      );
+    } else if (strcmp(buffer, "clear", 5)) {
+      clear_screen();
+      set_curpos(0, 0);
+    }
+  }
 }
