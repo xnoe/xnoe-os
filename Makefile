@@ -1,7 +1,13 @@
 CFLAGS = -m32 -nostdlib -fno-builtin -fno-exceptions -fno-leading-underscore -fno-pie -fno-stack-protector
 LDFLAGS = 
 
-disk.img: boot.sector kernel.bin hello.bin print.bin hello.txt boot32.bin kernel32.bin
+DISK_IMG_FILES = kernel.bin hello.bin print.bin boot32.bin kernel32.bin
+KERNEL32_OBJS = screenstuff.o io.o kernel32_strap.o kernel32.o
+
+run: disk.img
+	qemu-system-x86_64 disk.img
+
+disk.img: clean boot.sector $(DISK_IMG_FILES)
 	dd if=/dev/zero of=disk.img count=43 bs=100k
 	dd if=boot.sector of=disk.img conv=notrunc
 	mount disk.img img.d
@@ -10,26 +16,20 @@ disk.img: boot.sector kernel.bin hello.bin print.bin hello.txt boot32.bin kernel
 	umount img.d
 	chmod 777 disk.img
 
+clean:
+	rm $(DISK_IMG_FILES) $(KERNEL32_OBJS) boot.sector disk.img || true
+
 boot.sector: boot.asm
 	nasm $< -o $@
 
-kernel.bin: kernel.asm
+%.bin: %.asm
 	nasm $< -o $@
 
-hello.bin: hello.asm
-	nasm $< -o $@
-
-print.bin: print.asm
-	nasm $< -o $@
-
-boot32.bin: boot32.asm
-	nasm $< -o $@
-
-kernel32.bin: kernel32.ld kernel32_strap.o kernel32.o
-	ld $(LDFLAGS) -T $<
-
-kernel32.o: kernel32.c
-	gcc $(CFLAGS) -o $@ -c $<
+kernel32.bin: kernel32.ld $(KERNEL32_OBJS)
+	ld $(LDFLAGS) -T $< $(KERNEL32_OBJS)
 
 kernel32_strap.o: kernel32_strap.asm
 	nasm -felf32 $< -o $@
+
+%.o: %.c
+	gcc $(CFLAGS) -o $@ -c $<
