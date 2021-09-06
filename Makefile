@@ -2,7 +2,7 @@ CFLAGS = -m32 -mgeneral-regs-only -nostdlib -fno-builtin -fno-exceptions -fno-le
 LDFLAGS = 
 
 DISK_IMG_FILES = kernel.bin hello.bin print.bin boot32.bin kernel32.bin
-KERNEL32_OBJS = screenstuff.o io.o idt.o keyboard.o kernel32_strap.o kernel32.o
+KERNEL32_OBJS = screenstuff.o io.o idt.o keyboard.o strings.o kernel32_strap.o kernel32.o
 
 run: disk.img
 	qemu-system-x86_64 disk.img

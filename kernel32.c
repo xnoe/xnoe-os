@@ -4,15 +4,7 @@
 #include "idt.h"
 #include "keyboard.h"
 
-bool strcmp(char* a, char* b, int max) {
-  int index = 0;
-  while (index < max) {
-    if (a[index] != b[index])
-      return false;
-    index++;
-  }
-  return true;
-}
+#include "strings.h"
 
 int main() {
   init_idt();
@@ -33,8 +25,11 @@ int main() {
       buffer[i] = 0;
     readline(128, buffer);
 
-    //printf("%s\n", buffer);
-    if (strcmp(buffer, "help", 4)) {
+    char* argv[32];
+    int argc = string_split(' ', buffer, argv);
+
+
+    if (strcmp(argv[0], "help", 4)) {
       printf(
         "XnoeOS 32 Bit Mode Help.\n"
         "------------------------\n"
@@ -43,9 +38,14 @@ int main() {
         "- clear\n"
         ": Clears the screen\n"
       );
-    } else if (strcmp(buffer, "clear", 5)) {
+    } else if (strcmp(argv[0], "clear", 5)) {
       clear_screen();
       set_curpos(0, 0);
+    } else if (strcmp(argv[0], "echo", 4)) {
+      int index = 0;
+      while (++index <= argc)
+        printf("%s ", argv[index]);
+      printf("\n");
     }
   }
 }
