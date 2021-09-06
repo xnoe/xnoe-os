@@ -1,3 +1,17 @@
+  bpBytesPerSector equ 0x0b
+  bpSectorsPerCluster equ 0x0d
+  bpReservedSectors equ 0x0e
+  bpNoFATs equ 0x10
+  bpRootDirEntries equ 0x11
+  bpLVSectors equ 0x13
+  bpMediumID equ 0x15
+  bpSectorsPerFat equ 0x16
+  bpSectorsPerTrack equ 0x18
+  bpHeads equ 0x1a
+  bpHiddenSectors equ 0x1c
+  bpDriveNo equ 0x24
+  bpSignature equ 0x26
+
 [BITS 16]
   ; Update the IVT with our interrupt handler
   mov bx, 0
@@ -8,39 +22,58 @@
   mov ax, 2000h
   mov ds, ax
 
-  pop ax
-  mov byte [bootdisk], al
+  mov ax, 7c0h
+  mov fs, ax
 
   ; Set up kernel specifics
 
   ; Root Directory Entries will be at 2000h:2000h
   ; FAT1 will be at 2000h:4000h
 
+  ; Load sectors RDE to 2000h:2000h
   mov ax, 2000h
   mov es, ax
   mov bx, 2000h
-  mov ah, 2
-  mov al, 16
-  mov cl, 20
-  mov ch, 0
-  mov dh, 0
-  mov dl, [bootdisk]
 
-  ; Load sectors 20 through 36 to 2000h:2000h
+  ; Calculate position of RDE
+  mov ax, word [fs:bpSectorsPerFat]
+  movzx cx, byte [fs:bpNoFATs]
+  mul cx
+
+  add ax, 2
+
+  call prep_i13
+  mov al, 16
+
   int 13h
 
+  ; Load sectors 2 through 36 to 2000h:4000h
   mov ax, 2000h
   mov es, ax
   mov bx, 4000h
+  mov ax, 2
+  call prep_i13
+  mov ax, word [fs:bpSectorsPerFat]
   mov ah, 2
-  mov al, 9
-  mov cl, 2
-  mov ch, 0
-  mov dh, 0
-  mov dl, [bootdisk]
   
-  ; Load sectors 2 through 11 to 2000h:4000h
+  
   int 13h
+
+  ; Calculate file offset
+  mov ax, word [fs:bpSectorsPerFat]
+  movzx cx, byte [fs:bpNoFATs]
+  mul cx
+
+  push ax
+  mov ax, word [fs:bpRootDirEntries]
+  mov cx, 16
+  div cx
+
+  mov bx, ax
+  pop ax
+  add ax, bx
+
+  mov word [fileoffset], ax
 
   push msg
   call print
@@ -164,8 +197,6 @@ data:
   cmd_clear_text db "CLEAR"
 
   newline db 13, 10, 0
-
-  bootdisk db 0
 
   program_two db "HELLO   BIN"
 
@@ -300,6 +331,9 @@ load_file:
   mov bp, sp
 
   push ds
+  push fs
+  mov ax, 7c0h
+  mov fs, ax
   mov ax, 2000h
   mov ds, ax
 
@@ -308,16 +342,9 @@ load_file:
 
 load_file_loop:
   mov bx, word [bp + 6]
-
-  mov al, byte [bp + 8]
-  add al, 34
-
-  mov cl, al
-  mov al, 1
-  mov ah, 2
-  mov ch, 0
-  mov dh, 0
-  mov dl, byte [bootdisk]
+  movzx ax, byte [bp + 8]
+  add ax, word [fileoffset]
+  call prep_i13
 
   int 13h
 
@@ -334,6 +361,7 @@ load_file_loop:
   jmp load_file_loop
 
 load_file_loaded:
+  pop fs
   pop ds
   pop bp
   ret 6
@@ -369,7 +397,6 @@ decode_filename_loop:
 decode_filename_stage2:
   mov bx, 8
   mov cx, 3
-;  add si, 1
 
 decode_filename_stage2_loop:
 
@@ -419,3 +446,26 @@ _ihdlr_4:
 _ihdlr_5:
 _ihdlr_fin:
   iret
+
+prep_i13:
+  xor dx, dx
+  div word [fs:bpSectorsPerTrack]
+
+  push dx
+
+  xor dx, dx
+  div word [fs:bpHeads]
+
+  mov ch, al
+  mov dh, dl
+  mov dl, byte [fs:bpDriveNo]
+
+  pop ax
+  mov cl, al
+
+  mov al, 1
+  mov ah, 2
+
+  ret
+
+fileoffset dw 0
