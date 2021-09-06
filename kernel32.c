@@ -3,8 +3,8 @@
 #include "io.h"
 #include "idt.h"
 #include "keyboard.h"
-
 #include "strings.h"
+#include "atapio.h"
 
 int main() {
   init_idt();
@@ -16,6 +16,18 @@ int main() {
 
   init_keyboard();
   enable_idt();
+  init_atapio();
+
+  uint8_t sector[512];
+
+  read_sector(0, sector);
+
+  printf("OEM ID: %s\n", (char*)(sector+0x3));
+
+  char hellotxt[1024];
+
+  load_file("HELLO   TXT", hellotxt);
+  printf("%s", hellotxt);
 
 
   while (1) {
@@ -32,12 +44,12 @@ int main() {
       printf(
         "XnoeOS 32 Bit Mode Help.\n"
         "------------------------\n"
-        "- help\n"
-        ": Shows this message\n"
-        "- clear\n"
-        ": Clears the screen\n"
+        " - help\n"
+        " : Shows this message\n"
+        " - clear\n"
+        " : Clears the screen\n"
         " - echo\n"
-        ": Repeats the text written afterwards\n"
+        " : Repeats the text written afterwards\n"
       );
     } else if (strcmp(buffer, "clear", 5)) {
       clear_screen();
