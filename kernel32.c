@@ -25,11 +25,10 @@ int main() {
       buffer[i] = 0;
     readline(128, buffer);
 
-    char* argv[32];
-    int argc = string_split(' ', buffer, argv);
+    char* rest = split_on_first(' ', buffer);
 
 
-    if (strcmp(argv[0], "help", 4)) {
+    if (strcmp(buffer, "help", 4)) {
       printf(
         "XnoeOS 32 Bit Mode Help.\n"
         "------------------------\n"
@@ -37,15 +36,16 @@ int main() {
         ": Shows this message\n"
         "- clear\n"
         ": Clears the screen\n"
+        " - echo\n"
+        ": Repeats the text written afterwards\n"
       );
-    } else if (strcmp(argv[0], "clear", 5)) {
+    } else if (strcmp(buffer, "clear", 5)) {
       clear_screen();
       set_curpos(0, 0);
-    } else if (strcmp(argv[0], "echo", 4)) {
-      int index = 0;
-      while (++index <= argc)
-        printf("%s ", argv[index]);
-      printf("\n");
+    } else if (strcmp(buffer, "echo", 4)) {
+      printf("%s\n", rest);
+    } else {
+      printf("Bad Command or filename!\n");
     }
   }
 }

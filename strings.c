@@ -10,6 +10,20 @@ bool strcmp(char* a, char* b, int max) {
   return true;
 }
 
+char* split_on_first(char delimeter, char* string) {
+  int index = 0;
+  char current;
+
+  while (current = string[index++]) {
+    if (current == delimeter) {
+      string[index-1] = 0;
+      return string+index;
+    }
+  }
+
+  return 0;
+}
+
 int string_split(char delimeter, char* string, char** pointer_array) {
   int index = 0;
   int last_split_index = 0;
