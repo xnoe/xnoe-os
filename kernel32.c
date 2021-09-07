@@ -56,8 +56,28 @@ int main() {
       set_curpos(0, 0);
     } else if (strcmp(buffer, "echo", 4)) {
       printf("%s\n", rest);
+    } else if (strcmp(buffer, "type", 4)) {
+      char filenamebuffer[12];
+      uint8_t* filebuffer = 0x1006400;
+
+      decode_filename(rest, filenamebuffer);
+      if (!file_exists(filenamebuffer)) {
+        printf("File %s not found!\n", filenamebuffer);
+        continue;
+      }
+
+      for (int i=0; i<1024; i++)
+        hellotxt[i] = 0;
+      
+      load_file(filenamebuffer, filebuffer);
+      printf(filebuffer);
     } else {
-      printf("Bad Command or filename!\n");
+      char filenamebuffer[12];
+      decode_filename(buffer, filenamebuffer);
+      if (!file_exists(filenamebuffer)) {
+        printf("Bad Command or filename!\n");
+        continue;
+      }
     }
   }
 }

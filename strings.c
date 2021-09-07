@@ -45,3 +45,25 @@ int string_split(char delimeter, char* string, char** pointer_array) {
 
   return split_count;
 }
+
+void decode_filename(char* nice_name, char* filenamebuffer) {
+  // Clear filenamebuffer
+  for (int i=0; i<11; i++)
+    filenamebuffer[i] = ' ';
+  filenamebuffer[11] = 0;
+  
+  int fbIndex = 0;
+  for (int i=0; i<12; i++) {
+    if (nice_name[i] == 0)
+      return;
+    if (nice_name[i] == '.') {
+      fbIndex = 8;
+      continue;
+    }
+
+    if (nice_name[i] >= 0x65 && nice_name[i] <= 0x65+26)
+      filenamebuffer[fbIndex++] = nice_name[i] & (0xff - 32);
+    else 
+      filenamebuffer[fbIndex++] = nice_name[i];
+  }
+}
