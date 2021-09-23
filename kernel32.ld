@@ -10,5 +10,6 @@ SECTIONS {
     kernel32_strap.o(.text)
     kernel32.o(.text)
     *(.text)
+    heap_section = .;
   }
 }
