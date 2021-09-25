@@ -10,14 +10,13 @@ int main() {
   init_idt();
   init_term();
 
-  printf("KERNEL32 OK!\n");
+  printf("KERNEL OK!\n");
 
   printf("Hello, World!\n\nWe are running XnoeOS Code in C now, Protected Mode has been achieved and everything is working super nicely!\n\nHow wonderful!\n\nNow I just need to hope my print function works properly too~~\n");
   
   init_keyboard();
   
   enable_idt();
-  printf("A\n");
   init_atapio();
 
   uint8_t sector[512];
@@ -52,6 +51,8 @@ int main() {
         " : Clears the screen\n"
         " - echo\n"
         " : Repeats the text written afterwards\n"
+        " - type\n"
+        " : Prints the contents of a file\n"
       );
     } else if (strcmp(buffer, "clear", 5)) {
       clear_screen();

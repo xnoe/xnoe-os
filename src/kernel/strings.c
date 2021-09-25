@@ -61,8 +61,8 @@ void decode_filename(char* nice_name, char* filenamebuffer) {
       continue;
     }
 
-    if (nice_name[i] >= 0x65 && nice_name[i] <= 0x65+26)
-      filenamebuffer[fbIndex++] = nice_name[i] & (0xff - 32);
+    if (nice_name[i] >= 0x61 && nice_name[i] <= 0x7f)
+      filenamebuffer[fbIndex++] = nice_name[i] - 32;
     else 
       filenamebuffer[fbIndex++] = nice_name[i];
   }
