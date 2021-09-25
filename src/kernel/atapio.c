@@ -59,8 +59,8 @@ void init_atapio() {
   total_28_lbas = *(uint32_t*)(identify_result+60);
 
   // We've initialised now, let's load the FAT and RootDirEntries.
-  read_sectors(sectorsPerFAT * countFATs + 1, countRDEs / 16, rootDirEntries);
-  read_sectors(1, sectorsPerFAT, FAT1);
+  read_sectors(sectorsPerFAT * countFATs + countReserved, countRDEs / 16, rootDirEntries);
+  read_sectors(countReserved, sectorsPerFAT, FAT1);
 }
 
 void read_sector(uint32_t address, uint8_t* buffer) {
@@ -111,7 +111,7 @@ void load_file(char* filename, uint8_t* destination) {
 
   bool loaded = false;
   while (!loaded) {
-    uint16_t fromSector = location + (sectorsPerFAT * countFATs) + (countRDEs / 16) - 1;
+    uint16_t fromSector = location + (sectorsPerFAT * countFATs) + (countRDEs / 16) + (countReserved - 1) - 1;
     read_sector(fromSector, destination+offset);
     offset += 512;
 

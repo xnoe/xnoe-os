@@ -3,7 +3,7 @@
 GateEntry idt[256];
 
 void set_entry(uint8_t interrupt_number, uint16_t code_segment, void* handler, uint8_t type) {
-  uint32_t handler_addr = (uint16_t)handler;
+  uint32_t handler_addr = (uint32_t)handler;
   uint16_t* handler_halves = (uint16_t*)&handler_addr;
   idt[interrupt_number] = (GateEntry){
     .offset_low = handler_halves[0],

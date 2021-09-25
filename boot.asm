@@ -1,3 +1,4 @@
+[ORG 0x7C00]
 [BITS 16]
 
 jmp short bootcode
@@ -7,7 +8,7 @@ bpOEMid db "XNOE    "
 
 bpBytesPerSector dw 512
 bpSectorsPerCluster db 1
-bpReservedSectors dw 1
+bpReservedSectors dw 10 ; We should reserve 10 sectors. Boot sector + stage2
 bpNoFATs db 2
 bpRootDirEntries dw 256
 bpLVSectors dw 8586
@@ -27,8 +28,6 @@ bpVolumeLabel db "XNOE OS    "
 bpFileSystem db "FAT16   "
 
 bootcode:
-  mov ax, 7c0h
-  mov ds, ax
 
   mov byte [bpDriveNo], dl
 
@@ -43,137 +42,34 @@ bootcode:
   movzx cx, cl
   mov word [bpSectorsPerTrack], cx
 
-  mov si, boot_msg
-  call _boot_print
-
-  mov ax, ds
+  ; Load the stage2 (32-bit) from the next sectors
+  ; Load it at 0x10000
+  mov ax, 7e0h
   mov es, ax
-  mov bx, buffer
+  xor bx, bx
 
-  ; Calculate position of rootdirentries
-  mov ax, word [bpSectorsPerFat]
-  movzx cx, byte [bpNoFATs]
-  mul cx
-
-  add ax, 2
+  mov ax, 2 ; Begin with the 2nd sector
   call prep_i13
-
+  mov al, 9 ; Load the next 9 sectors (4.5k)
   int 13h
 
-  mov cx, [bpRootDirEntries]
-  mov di, buffer
+  ; Now we should prepare to enter in to protected mode for the sole purpose of running the stage2 bootloader
 
-  mov ax, 0
+  ; Enable the A20 line
+  in al, 0x92
+  or al, 2
+  out 0x92, al
 
-;  jmp $
+  ; Load the temporary GDT
+  cli
+  lgdt [gdt_desc]
+  mov eax, cr0
+  or eax, 1
+  mov cr0, eax
 
-kernel_finder:
-  xchg cx, dx
+  jmp 08h:7e00h ; Far jump to where we loaded the stage 2
 
-  mov di, buffer
-  add di, ax
-
-  mov si, kernel_file
-  mov cx, 11
-  rep cmpsb
-  je kernel_found
-
-  add ax, 20h
-
-  xchg cx, dx
-  loop kernel_finder
-
-  mov si, kernel_nf
-  call _boot_print
-
-  jmp $
-
-kernel_found:
-;  jmp $
-  mov ax, [es:di+0fh]
-  mov word [cluster], ax
-
-fat_loader:
-  mov ax, ds
-  mov es, ax
-  mov bx, buffer
-
-  mov ax, word [bpSectorsPerFat]
-  mov ah, 2
-  mov cl, 2
-  mov ch, 0
-  mov dh, 0
-  mov dl, byte [bpDriveNo]
-
-  int 13h
-
-kernel_loader:
-
-  ; Calculate file offset
-  mov ax, word [bpSectorsPerFat]
-  movzx cx, byte [bpNoFATs]
-  mul cx
-
-  push ax
-  mov ax, word [bpRootDirEntries]
-  mov cx, 16
-  div cx
-
-  mov bx, ax
-  pop ax
-  add ax, bx
-
-  mov word [fileoffset], ax
-
-  mov ax, 2000h
-  mov es, ax
-  mov bx, word [pointer]
-
-  movzx ax, byte [cluster]
-  add ax, word [fileoffset]
-
-  call prep_i13
-
-  int 13h
-
-  add word [pointer], 512
-
-  mov si, word [cluster]
-  shl si, 1
-  add si, buffer
-  cmp word [si], 0ffffh
-  je kernel_loaded
-
-  add word [cluster], 1
-  jmp kernel_loader
-
-kernel_loaded:
-  jmp 2000h:0h
-
-_boot_print:
-  mov ah, 0eh
-  mov cx, 1
-  mov bh, 0
-_boot_print_loop:
-  lodsb
-  cmp al, 0
-  je _boot_print_exit
-  int 10h
-  jmp _boot_print_loop
-_boot_print_exit:
-  ret
-
-boot_msg db "Boot Sector OK!", 13, 10, 0
-kernel_nf db "KERNEL.BIN Missing!", 13, 10, 0
-new_line db " ", 0
-kernel_file db "KERNEL  BIN"
-
-fileoffset dw 0
-
-cluster dw 0
-pointer dw 0
-
-; AX set to the logical sector number.
+; In ax with sector addr, out correct values for int 13h
 prep_i13:
   xor dx, dx
   div word [bpSectorsPerTrack]
@@ -195,7 +91,27 @@ prep_i13:
 
   ret
 
+gdt:
+null:
+  dq 0
+code:
+  dw 0xffff
+  dw 0
+  db 0
+  db 10011010b
+  db 11001111b
+  db 0
+data:
+  dw 0xffff
+  dw 0
+  db 0
+  db 10010010b
+  db 11001111b
+  db 0
+gdt_end:
+gdt_desc:
+  dw gdt_desc - gdt_end - 1
+  dd gdt
+
 TIMES 510 - ($ - $$) db 0
 DW 0xAA55
-
-buffer:

@@ -13,9 +13,11 @@ int main() {
   printf("KERNEL32 OK!\n");
 
   printf("Hello, World!\n\nWe are running XnoeOS Code in C now, Protected Mode has been achieved and everything is working super nicely!\n\nHow wonderful!\n\nNow I just need to hope my print function works properly too~~\n");
-
+  
   init_keyboard();
+  
   enable_idt();
+  printf("A\n");
   init_atapio();
 
   uint8_t sector[512];

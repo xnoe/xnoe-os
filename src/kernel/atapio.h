@@ -6,7 +6,6 @@
 #include "io.h"
 #include "types.h"
 #include "strings.h"
-#include "screenstuff.h"
 
 void init_atapio();
 void read_sector(uint32_t address, uint8_t* buffer);
