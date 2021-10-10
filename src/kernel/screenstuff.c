@@ -71,8 +71,9 @@ int int_to_decimal(unsigned int number, char* string_buffer) {
 
 char dec_to_hex[16] = "0123456789abcdef";
 int int_to_hex(unsigned int number, char* string_buffer) { 
-  for (int i=0; i<9; i++)
-    string_buffer[i] = 0;
+  for (int i=0; i<8; i++)
+    string_buffer[i] = '0';
+  string_buffer[8] = 0;
   
   int index = 7;
   unsigned int acc = number;
@@ -128,7 +129,7 @@ void printf(const char* string, ...) {
         case 'x':
           char hex_buffer[8];
           offset = int_to_hex(va_arg(ptr, int), hex_buffer);
-          printf(hex_buffer + offset);
+          printf(hex_buffer);
           break;
         case 's':
           printf(va_arg(ptr, const char*));

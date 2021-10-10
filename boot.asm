@@ -8,7 +8,7 @@ bpOEMid db "XNOE    "
 
 bpBytesPerSector dw 512
 bpSectorsPerCluster db 1
-bpReservedSectors dw 10 ; We should reserve 10 sectors. Boot sector + stage2
+bpReservedSectors dw 32 ; We should reserve some sectors. Boot sector + stage2
 bpNoFATs db 2
 bpRootDirEntries dw 256
 bpLVSectors dw 8586
@@ -50,14 +50,14 @@ bootcode:
 
   mov ax, 2 ; Begin with the 2nd sector
   call prep_i13
-  mov al, 9 ; Load the next 9 sectors (4.5k)
+  mov al, 31 ; Load the next 9 sectors (4.5k)
   int 13h
 
   ; We need to get the memory configuration from the BIOS now
   ; To do this we can use int 15h eax=e820h
-  ; We will load the e820 data to 0x10000
+  ; We will load the e820 data to 0x20000
 
-  mov ax, 1000h
+  mov ax, 2000h
   mov es, ax
   xor di, di
   xor ebx, ebx
