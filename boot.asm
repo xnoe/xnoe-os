@@ -43,7 +43,7 @@ bootcode:
   mov word [bpSectorsPerTrack], cx
 
   ; Load the stage2 (32-bit) from the next sectors
-  ; Load it at 0x10000
+  ; Load it at 0x7e00
   mov ax, 7e0h
   mov es, ax
   xor bx, bx
@@ -53,6 +53,30 @@ bootcode:
   mov al, 9 ; Load the next 9 sectors (4.5k)
   int 13h
 
+  ; We need to get the memory configuration from the BIOS now
+  ; To do this we can use int 15h eax=e820h
+  ; We will load the e820 data to 0x10000
+
+  mov ax, 1000h
+  mov es, ax
+  xor di, di
+  xor ebx, ebx
+
+get_memory_map_loop:
+  mov edx, 0x534D4150
+  mov ecx, 24
+
+  mov eax, 0xe820
+  int 15h
+  jc mmap_finish
+
+  cmp ebx, 0
+  je mmap_finish
+
+  add di, 24
+  jmp get_memory_map_loop
+
+mmap_finish:
   ; Now we should prepare to enter in to protected mode for the sole purpose of running the stage2 bootloader
 
   ; Enable the A20 line
