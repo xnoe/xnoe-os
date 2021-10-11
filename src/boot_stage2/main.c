@@ -1,6 +1,6 @@
-#include "../kernel/atapio.h"
-#include "../kernel/screenstuff.h"
-#include "../kernel/paging.h"
+#include "atapio.h"
+#include "screenstuff.h"
+#include "paging.h"
 
 typedef struct {
   uint32_t base_low;
@@ -120,7 +120,8 @@ void main() {
   map_many_4k_phys_to_virt(0x121000, 0xc0101000, kernel_page_directory, kernel_page_tables, 1024); // Map 1024 pages from 0x121000 to 0xc0101000
   map_4k_phys_to_virt(0xb8000, 0xc0501000, kernel_page_directory, kernel_page_tables); // Map 0xb8000 (video) to 0xc0501000
 
-  map_4k_phys_to_virt(0x8000, 0x8000, kernel_page_directory, kernel_page_tables);
+  map_many_4k_phys_to_virt(0x7000, 0x7000, kernel_page_directory, kernel_page_tables, 2);
+  map_4k_phys_to_virt(0x8f000, 0x8f000, kernel_page_directory, kernel_page_tables);
 
   load_file("KERNEL  BIN", kernel_location);
 

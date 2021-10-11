@@ -1,45 +1,49 @@
 CFLAGS = -m32 -mgeneral-regs-only -nostdlib -fno-builtin -fno-exceptions -fno-leading-underscore -fno-pie -fno-stack-protector -Wno-pointer-to-int-cast
 LDFLAGS = 
 
-DISK_IMG_FILES = kernel.bin
-KERNEL32_OBJS = screenstuff.o io.o idt.o keyboard.o strings.o atapio.o c_code_entry.o kernel.o paging.o
+DISK_IMG_FILES = build/kernel/kernel.bin
+KERNEL_OBJS = build/c_code_entry.o build/kernel/screenstuff.o build/kernel/io.o build/kernel/idt.o build/kernel/keyboard.o build/kernel/strings.o build/kernel/atapio.o build/kernel/kernel.o build/kernel/paging.o
+STAGE2_OBS = build/c_code_entry.o build/boot_stage2/io.o build/boot_stage2/atapio.o build/boot_stage2/strings.o build/boot_stage2/screenstuff.o build/boot_stage2/stage2.o build/boot_stage2/paging.o
 
 run: disk.img
 	qemu-system-x86_64 disk.img
 
-disk.img: clean boot.sector boot.stage2 $(DISK_IMG_FILES)
+disk.img: clean prepare build/boot/boot.bin build/boot_stage2/boot.bin $(DISK_IMG_FILES)
 	dd if=/dev/zero of=disk.img count=43 bs=100k
-	dd if=boot.sector of=disk.img conv=notrunc
-	dd obs=512 seek=1 if=boot.stage2 of=disk.img conv=notrunc
+	dd if=build/boot/boot.bin of=disk.img conv=notrunc
+	dd obs=512 seek=1 if=build/boot_stage2/boot.bin of=disk.img conv=notrunc
 	mount disk.img img.d
-	cp *.bin img.d/
+	cp $(DISK_IMG_FILES) img.d/
 	cp hello.txt img.d/
 	umount img.d
 	chmod 777 disk.img
 
+prepare:
+	mkdir -p img.d
+	mkdir -p build/boot
+	mkdir -p build/boot_stage2
+	mkdir -p build/kernel
+
 clean:
-	rm $(DISK_IMG_FILES) $(KERNEL32_OBJS) boot.sector disk.img || true
+	rm -rf build
 
-boot.sector: boot.asm
+build/boot/boot.bin: src/boot/boot.asm
 	nasm $< -o $@
 
-boot.stage2: boot_stage2.ld boot.stage2.o
-	ld $(LDFLAGS) -T $< boot.stage2.o
+build/boot_stage2/boot.bin: src/boot_stage2/boot_stage2.ld $(STAGE2_OBS)
+	ld $(LDFLAGS) -T $< $(STAGE2_OBS)
 
-boot.stage2.o: src/boot_stage2/main.c io.o atapio.o strings.o c_code_entry.o screenstuff.o paging.o
+build/kernel/kernel.bin: src/kernel/kernel.ld $(KERNEL_OBJS)
+	ld $(LDFLAGS) -T $< $(KERNEL_OBJS)
+
+build/boot_stage2/stage2.o: src/boot_stage2/main.c 
 	gcc $(CFLAGS) -o $@ -c $<
 
-%.bin: %.asm
-	nasm $< -o $@
-
-kernel.bin: kernel.ld $(KERNEL32_OBJS)
-	ld $(LDFLAGS) -T $< $(KERNEL32_OBJS)
-
-%.o: src/kernel/%.asm
-	nasm -felf32 $< -o $@
-
-%.o: src/%.asm
-	nasm -felf32 $< -o $@
-
-%.o: src/kernel/%.c
+build/kernel/%.o: src/kernel/%.c
 	gcc $(CFLAGS) -o $@ -c $<
+
+build/boot_stage2/%.o: src/boot_stage2/%.c
+	gcc $(CFLAGS) -o $@ -c $<
+
+build/%.o: src/%.asm
+	nasm -felf32 $< -o $@
