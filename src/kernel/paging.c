@@ -1,11 +1,16 @@
 #include "paging.h"
 
-void map_4k_phys_to_virt(uint32_t physical, uint32_t virtual, PDE* page_directory, PTE** page_tables) {
-  uint32_t pd_index = (virtual & (1023 << 20)) >> 20;
-  uint32_t pt_index = (virtual & (1023 << 10)) >> 10;
+typedef struct {
+  uint32_t page_offset : 12;
+  uint32_t pt_index : 10;
+  uint32_t pd_index : 10;
+}__attribute__((packed)) split_addr;
 
-  page_directory[pd_index] = (PDE){
-    .address = (uint32_t)(page_tables[pd_index]) >> 12,
+void map_4k_phys_to_virt(uint32_t physical, uint32_t virtual, PDE* page_directory, PTE** page_tables) {
+  split_addr* split = (split_addr*)&virtual;
+
+  page_directory[split->pd_index] = (PDE){
+    .address = (uint32_t)(page_tables[split->pd_index]) >> 12,
     .available = 0,
     .page_4mb = 0,
     .accessed = 0,
@@ -19,7 +24,7 @@ void map_4k_phys_to_virt(uint32_t physical, uint32_t virtual, PDE* page_director
     .ignored2 = 0
   };
 
-  page_tables[pd_index][pt_index] = (PTE){
+  page_tables[split->pd_index][split->pt_index] = (PTE){
     .address = physical >> 12,
     .available = 0,
     .global = 0,

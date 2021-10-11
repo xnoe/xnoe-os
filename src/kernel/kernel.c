@@ -7,6 +7,7 @@
 #include "atapio.h"
 
 int main() {
+  while (1);
   init_idt();
   init_term();
 

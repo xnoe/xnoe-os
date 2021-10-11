@@ -126,13 +126,13 @@ void main() {
 
   printf("Stage2 success!\n");
 
-  asm ("mov %0, %%eax;" 
-       "mov %%eax, %%cr3" : : "m" (kernel_page_directory));
+  //while (1);
 
-  asm ("mov %cr0, %eax;"
-       "or $0x80000001, %eax;"
-       "mov %eax, %cr0");
+  asm volatile("mov %0, %%eax;" 
+       "mov %%eax, %%cr3;"
+       "mov %%cr0, %%eax;"
+       "or $0x80000000, %%eax;"
+       "mov %%eax, %%cr0" : : "m" (kernel_page_directory));
 
-  while (1);
   ((void(*)(void))0xc0000000)();
 }
