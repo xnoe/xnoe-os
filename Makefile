@@ -2,7 +2,7 @@ CFLAGS = -m32 -mgeneral-regs-only -nostdlib -fno-builtin -fno-exceptions -fno-le
 LDFLAGS = 
 
 DISK_IMG_FILES = build/kernel/kernel.bin
-KERNEL_OBJS = build/c_code_entry.o build/kernel/screenstuff.o build/kernel/io.o build/kernel/idt.o build/kernel/keyboard.o build/kernel/strings.o build/kernel/atapio.o build/kernel/kernel.o build/kernel/paging.o
+KERNEL_OBJS = build/c_code_entry.o build/kernel/screenstuff.o build/kernel/io.o build/kernel/idt.o build/kernel/keyboard.o build/kernel/strings.o build/kernel/atapio.o build/kernel/kernel.o build/kernel/paging.o build/kernel/allocate.o
 STAGE2_OBS = build/c_code_entry.o build/boot_stage2/io.o build/boot_stage2/atapio.o build/boot_stage2/strings.o build/boot_stage2/screenstuff.o build/boot_stage2/stage2.o build/boot_stage2/paging.o
 
 run: disk.img
@@ -23,6 +23,7 @@ prepare:
 	mkdir -p build/boot
 	mkdir -p build/boot_stage2
 	mkdir -p build/kernel
+	mountpoint img.d | grep not || umount img.d
 
 clean:
 	rm -rf build

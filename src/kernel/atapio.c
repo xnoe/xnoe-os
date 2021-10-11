@@ -11,8 +11,8 @@
 uint16_t identify_result[256];
 uint32_t total_28_lbas = 0;
 
-uint8_t* rootDirEntries = 0x1000000;
-uint16_t* FAT1 = 0x1002000;
+uint8_t* rootDirEntries;
+uint16_t* FAT1;
 
 uint16_t countReserved;
 uint8_t countFATs;
@@ -21,6 +21,10 @@ uint16_t sectorsPerFAT;
 
 
 void init_atapio() {
+  rootDirEntries = (uint8_t*)dumb_alloc(8192);
+  FAT1 = (uint16_t*)dumb_alloc(512 * 34);
+  printf("RDE: %x\nFAT1: %x\n", rootDirEntries, FAT1);
+
   countReserved = *(uint16_t*)0x7c0e;
   countFATs = *(uint8_t*)0x7c10;
   countRDEs = *(uint16_t*)0x7c11;

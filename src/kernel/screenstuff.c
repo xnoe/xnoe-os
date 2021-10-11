@@ -1,6 +1,6 @@
 #include "screenstuff.h"
 
-uint16_t* VMEM_ADDR = (uint16_t*)0xb8000;
+uint16_t* VMEM_ADDR = (uint16_t*)0xc0501000;
 const int TERM_WIDTH = 80;
 const int TERM_HEIGHT = 25;
 

@@ -119,9 +119,13 @@ void main() {
   map_4k_phys_to_virt((uint32_t)kernel_page_directory, 0xc0100000, kernel_page_directory, kernel_page_tables); // Map the page directory to 0xc0100000
   map_many_4k_phys_to_virt(0x121000, 0xc0101000, kernel_page_directory, kernel_page_tables, 1024); // Map 1024 pages from 0x121000 to 0xc0101000
   map_4k_phys_to_virt(0xb8000, 0xc0501000, kernel_page_directory, kernel_page_tables); // Map 0xb8000 (video) to 0xc0501000
+  map_4k_phys_to_virt(0x521000, 0xc0502000, kernel_page_directory, kernel_page_tables); // Map the PTE** data, we'll need to convert the pointers to point at kernel space at some point.
+
+  // Map the bitmap 
+  map_many_4k_phys_to_virt(0x100000, 0xc0600000, kernel_page_directory, kernel_page_tables, 32);
 
   map_many_4k_phys_to_virt(0x7000, 0x7000, kernel_page_directory, kernel_page_tables, 2);
-  map_4k_phys_to_virt(0x8f000, 0x8f000, kernel_page_directory, kernel_page_tables);
+  map_many_4k_phys_to_virt(0x8a000, 0x8a000, kernel_page_directory, kernel_page_tables, 6);
 
   load_file("KERNEL  BIN", kernel_location);
 

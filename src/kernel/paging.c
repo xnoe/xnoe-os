@@ -24,7 +24,7 @@ void map_4k_phys_to_virt(uint32_t physical, uint32_t virtual, PDE* page_director
     .ignored2 = 0
   };
 
-  page_tables[split->pd_index][split->pt_index] = (PTE){
+  ((PTE*)((uint32_t)page_tables[split->pd_index] + 0xbffe0000))[split->pt_index] = (PTE){
     .address = physical >> 12,
     .available = 0,
     .global = 0,

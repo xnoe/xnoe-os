@@ -7,18 +7,20 @@
 #include "atapio.h"
 
 int main() {
-  while (1);
   init_idt();
   init_term();
+//  init_allocator();
 
+  printf("Hello, World!\n\nWe are running XnoeOS Code in C now, Protected Mode has been achieved (as well as Virtual Memory / Paging!!!) and everything is working super nicely!\n\nHow wonderful!\n\nNow I just need to hope my print function works properly too~~\n");
+  
   printf("KERNEL OK!\n");
 
-  printf("Hello, World!\n\nWe are running XnoeOS Code in C now, Protected Mode has been achieved and everything is working super nicely!\n\nHow wonderful!\n\nNow I just need to hope my print function works properly too~~\n");
-  
   init_keyboard();
   
   enable_idt();
   init_atapio();
+
+  //while (1);
 
   uint8_t sector[512];
 
