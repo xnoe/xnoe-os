@@ -2,7 +2,7 @@ CFLAGS = -m32 -mgeneral-regs-only -nostdlib -fno-builtin -fno-exceptions -fno-le
 LDFLAGS = 
 
 DISK_IMG_FILES = kernel.bin
-KERNEL32_OBJS = screenstuff.o io.o idt.o keyboard.o strings.o atapio.o c_code_entry.o kernel.o
+KERNEL32_OBJS = screenstuff.o io.o idt.o keyboard.o strings.o atapio.o c_code_entry.o kernel.o paging.o
 
 run: disk.img
 	qemu-system-x86_64 disk.img
@@ -26,7 +26,7 @@ boot.sector: boot.asm
 boot.stage2: boot_stage2.ld boot.stage2.o
 	ld $(LDFLAGS) -T $< boot.stage2.o
 
-boot.stage2.o: src/boot_stage2/main.c io.o atapio.o strings.o c_code_entry.o screenstuff.o
+boot.stage2.o: src/boot_stage2/main.c io.o atapio.o strings.o c_code_entry.o screenstuff.o paging.o
 	gcc $(CFLAGS) -o $@ -c $<
 
 %.bin: %.asm

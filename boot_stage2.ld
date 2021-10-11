@@ -1,7 +1,7 @@
 OUTPUT_FORMAT(binary)
 OUTPUT_ARCH(i386:i386)
 
-INPUT(io.o atapio.o strings.o c_code_entry.o screenstuff.o)
+INPUT(io.o atapio.o strings.o c_code_entry.o screenstuff.o paging.o)
 OUTPUT(boot.stage2)
 
 SECTIONS {
