@@ -134,7 +134,7 @@ data:
   db 0
 gdt_end:
 gdt_desc:
-  dw gdt_desc - gdt_end - 1
+  dw gdt_end - gdt - 1
   dd gdt
 
 TIMES 510 - ($ - $$) db 0

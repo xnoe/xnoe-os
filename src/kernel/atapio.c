@@ -23,12 +23,14 @@ uint16_t sectorsPerFAT;
 void init_atapio() {
   rootDirEntries = (uint8_t*)dumb_alloc(8192);
   FAT1 = (uint16_t*)dumb_alloc(512 * 34);
-  printf("RDE: %x\nFAT1: %x\n", rootDirEntries, FAT1);
 
-  countReserved = *(uint16_t*)0x7c0e;
-  countFATs = *(uint8_t*)0x7c10;
-  countRDEs = *(uint16_t*)0x7c11;
-  sectorsPerFAT = *(uint16_t*)0x7c16;
+  uint32_t boot_sector = (uint32_t)dumb_alloc(4096);
+  read_sectors(0, 1, (uint8_t*)boot_sector);
+
+  countReserved = *((uint16_t*)(boot_sector + 0x0e));
+  countFATs = *((uint8_t*)(boot_sector + 0x10));
+  countRDEs = *((uint16_t*)(boot_sector + 0x11));
+  sectorsPerFAT = *((uint16_t*)(boot_sector + 0x16));
 
   // Select Drive 0 on the Primary Bus
   outb(0x1f6, 0xa0);

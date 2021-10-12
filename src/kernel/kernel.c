@@ -5,11 +5,12 @@
 #include "keyboard.h"
 #include "strings.h"
 #include "atapio.h"
+#include "gdt.h"
 
 int main() {
+  init_gdt();
   init_idt();
   init_term();
-//  init_allocator();
 
   printf("Hello, World!\n\nWe are running XnoeOS Code in C now, Protected Mode has been achieved (as well as Virtual Memory / Paging!!!) and everything is working super nicely!\n\nHow wonderful!\n\nNow I just need to hope my print function works properly too~~\n");
   
@@ -20,19 +21,11 @@ int main() {
   enable_idt();
   init_atapio();
 
-  //while (1);
-
   uint8_t sector[512];
 
   read_sector(0, sector);
 
-  printf("OEM ID: %s\n", (char*)(sector+0x3));
-
-  char hellotxt[1024];
-
-  load_file("HELLO   TXT", hellotxt);
-  printf("%s", hellotxt);
-
+  uint8_t* filebuffer = (uint8_t*)dumb_alloc(0x3000);
 
   while (1) {
     printf(">>> ");
@@ -42,7 +35,6 @@ int main() {
     readline(128, buffer);
 
     char* rest = split_on_first(' ', buffer);
-
 
     if (strcmp(buffer, "help", 4)) {
       printf(
@@ -64,7 +56,6 @@ int main() {
       printf("%s\n", rest);
     } else if (strcmp(buffer, "type", 4)) {
       char filenamebuffer[12];
-      uint8_t* filebuffer = 0x1006400;
 
       decode_filename(rest, filenamebuffer);
       if (!file_exists(filenamebuffer)) {
@@ -72,8 +63,8 @@ int main() {
         continue;
       }
 
-      for (int i=0; i<1024; i++)
-        hellotxt[i] = 0;
+      for (int i=0; i<4096; i++)
+        filebuffer[i] = 0;
       
       load_file(filenamebuffer, filebuffer);
       printf(filebuffer);

@@ -107,7 +107,7 @@ void main() {
   PTE** kernel_page_tables = 0x521000;
 
   // Mark unavailable bitmap to 0x522000
-  mark_unavailble(bitmap, 0x522000 - (uint32_t)bitmap);
+  mark_unavailble(bitmap, 0x4000000);
 
   // Now we want to map some stuff.
   // But first, we should load the kernel somewhere
@@ -124,7 +124,7 @@ void main() {
   // Map the bitmap 
   map_many_4k_phys_to_virt(0x100000, 0xc0600000, kernel_page_directory, kernel_page_tables, 32);
 
-  map_many_4k_phys_to_virt(0x7000, 0x7000, kernel_page_directory, kernel_page_tables, 2);
+  map_4k_phys_to_virt(0x8000, 0x8000, kernel_page_directory, kernel_page_tables);
   map_many_4k_phys_to_virt(0x8a000, 0x8a000, kernel_page_directory, kernel_page_tables, 6);
 
   load_file("KERNEL  BIN", kernel_location);

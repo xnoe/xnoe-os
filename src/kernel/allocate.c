@@ -57,7 +57,6 @@ void* dumb_alloc(uint32_t size) {
 
   while (size > 0) {
     for (; get_bit(last_free_page, bitmap) == 0; last_free_page++);
-    printf("Free page: %d\n", last_free_page);
 
     uint32_t phys_addr = last_free_page * 4096;
 

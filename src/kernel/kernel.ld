@@ -7,9 +7,8 @@ SECTIONS {
   . = 0xc0000000;
 
   .text : { 
-    build/c_code_entry.o(.text)
+    build/kernel/entry.o(.text)
     build/kernel/kernel.o(.text)
     build/kernel/*(.text)
-    heap_section = .;
   }
 }
