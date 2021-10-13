@@ -121,25 +121,29 @@ void printf(const char* string, ...) {
       int type = string[index++];
       int offset;
       switch (type) {
-        case 'd':
+        case 'd': {
           char decimal_buffer[11];
           offset = int_to_decimal(va_arg(ptr, int), decimal_buffer);
           printf(decimal_buffer + offset);
           break;
-        case 'x':
+        }
+        case 'x': {
           char hex_buffer[8];
           offset = int_to_hex(va_arg(ptr, int), hex_buffer);
           printf(hex_buffer);
           break;
-        case 's':
+        }
+        case 's': {
           printf(va_arg(ptr, const char*));
           break;
-        case 'c':
+        }
+        case 'c': {
           int mem_pos = cursor_y * TERM_WIDTH + cursor_x++;
           int promoted = va_arg(ptr, int);
           char charred = promoted;
           VMEM_ADDR[mem_pos] = charred + (0x07<<8);
           break;
+        }
       }
       continue;
     }
