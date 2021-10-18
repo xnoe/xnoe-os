@@ -4,6 +4,10 @@
 #include "paging.h"
 //void init_allocator();
 
+extern uint8_t* bitmap;
+extern PDE* kernel_page_directory;
+extern PTE** kernel_page_tables;
+
 void set_bit(uint32_t offset, uint8_t* buffer);
 void unset_bit(uint32_t offset, uint8_t* buffer);
 uint8_t get_bit(uint32_t offset, uint8_t* buffer);

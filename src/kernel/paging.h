@@ -34,4 +34,6 @@ typedef struct {
 
 void map_4k_phys_to_virt(uint32_t physical, uint32_t virtual, PDE* page_directory, PTE** page_tables);
 void map_many_4k_phys_to_virt(uint32_t physical, uint32_t virtual, PDE* page_directory, PTE** page_tables, uint32_t count);
+
+void unmap_4k_virt(uint32_t virtual, PDE* page_directory, PTE** page_tables);
 #endif

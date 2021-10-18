@@ -44,3 +44,22 @@ void map_many_4k_phys_to_virt(uint32_t physical, uint32_t virtual, PDE* page_dir
   for (int i=0; i<count; i++)
     map_4k_phys_to_virt(physical + 4096*i, virtual + 4096*i, page_directory, page_tables);
 }
+
+void unmap_4k_virt(uint32_t virtual, PDE* page_directory, PTE** page_tables) {
+  split_addr* split = (split_addr*)&virtual;
+
+  ((PTE*)((uint32_t)page_tables[split->pd_index] + 0xbffe0000))[split->pt_index] = (PTE){
+    .address = 0,
+    .available = 0,
+    .global = 0,
+    .accessed = 0,
+    .disable_cache = 0,
+    .dirty = 0,
+    .write_through_cache = 0,
+    .privilege = 0,
+    .present = 0,
+    .read_write = 0,
+
+    .ignored = 0
+  };
+}

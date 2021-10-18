@@ -6,6 +6,8 @@
 #include "strings.h"
 #include "atapio.h"
 #include "gdt.h"
+#include "paging.h"
+#include "allocate.h"
 
 int main() {
   init_gdt();
@@ -15,6 +17,8 @@ int main() {
   printf("Hello, World!\n\nWe are running XnoeOS Code in C now, Protected Mode has been achieved (as well as Virtual Memory / Paging!!!) and everything is working super nicely!\n\nHow wonderful!\n\nNow I just need to hope my print function works properly too~~\n");
   
   printf("KERNEL OK!\n");
+
+  unmap_4k_virt(0x8000, kernel_page_directory, kernel_page_tables);
 
   init_keyboard();
   

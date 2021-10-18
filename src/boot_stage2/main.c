@@ -47,6 +47,21 @@ void mark_unavailble(uint32_t address, uint32_t size) {
   }
 }
 
+char* stringify_type(uint32_t type) {
+  switch (type) {
+    case 1:
+      return "Usable";
+    case 3:
+      return "ACPI Reclaimable";
+    case 4:
+      return "ACPI NVS";
+    case 5:
+      return "Bad memory";
+    default:
+      return "Reserved";
+  }
+}
+
 void main() {
   init_term();
   init_atapio();
@@ -64,7 +79,7 @@ void main() {
 
   for (int i=0; e820_entries[i].length_low != 0 || e820_entries[i].length_high != 0; i++) {
     e820entry entry = e820_entries[i];
-    printf("BIOS-e820: Starting %x%x, length %x%x is %s\n", entry.base_high, entry.base_low, entry.length_high, entry.length_low, entry.type == 1 ? "Available" : "Reserved");
+    printf("BIOS-e820: Starting %x%x, length %x%x is %s\n", entry.base_high, entry.base_low, entry.length_high, entry.length_low, stringify_type(entry.type));
 
     if (entry.type != 1)
       continue;

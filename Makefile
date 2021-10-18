@@ -1,4 +1,5 @@
 CFLAGS = -std=gnu11 -m32 -mgeneral-regs-only -nostdlib -fno-builtin -fno-exceptions -fno-leading-underscore -fno-pie -fno-stack-protector -Wno-pointer-to-int-cast
+CXXFLAGS = -m32 -fno-use-cxa-atexit -nostdlib -fno-builtin -fno-rtti -fno-exceptions -fno-leading-underscore
 LDFLAGS = 
 
 DISK_IMG_FILES = build/kernel/kernel.bin
@@ -49,6 +50,9 @@ build/boot_stage2/stage2.o: src/boot_stage2/main.c
 
 build/kernel/%.o: src/kernel/%.c
 	gcc $(CFLAGS) -o $@ -c $<
+
+build/kernel/%.o: src/kernel/%.cpp
+	g++ $(CFLAGS) -o $@ -c $<
 
 build/kernel/%.o: src/kernel/%.asm
 	nasm -felf32 $< -o $@
