@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include "types.h"
 
-typedef struct {
+struct __attribute__((packed)) PDE {
   uint32_t present : 1;
   uint32_t read_write : 1;
   uint32_t privilege : 1;
@@ -16,9 +16,9 @@ typedef struct {
   uint32_t ignored : 1;
   uint32_t available : 3;
   uint32_t address : 20;
-}__attribute__((packed)) PDE;
+};
 
-typedef struct {
+struct __attribute__((packed)) PTE {
   uint32_t present : 1;
   uint32_t read_write : 1;
   uint32_t privilege : 1;
@@ -30,10 +30,10 @@ typedef struct {
   uint32_t global : 1;
   uint32_t available : 3;
   uint32_t address : 20;
-}__attribute__((packed)) PTE;
+};
 
-void map_4k_phys_to_virt(uint32_t physical, uint32_t virtual, PDE* page_directory, PTE** page_tables);
-void map_many_4k_phys_to_virt(uint32_t physical, uint32_t virtual, PDE* page_directory, PTE** page_tables, uint32_t count);
+void map_4k_phys_to_virt(uint32_t physical, uint32_t virt, PDE* page_directory, PTE** page_tables);
+void map_many_4k_phys_to_virt(uint32_t physical, uint32_t virt, PDE* page_directory, PTE** page_tables, uint32_t count);
 
-void unmap_4k_virt(uint32_t virtual, PDE* page_directory, PTE** page_tables);
+void unmap_4k_virt(uint32_t virt, PDE* page_directory, PTE** page_tables);
 #endif

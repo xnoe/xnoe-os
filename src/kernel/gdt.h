@@ -3,7 +3,7 @@
 
 #include "types.h"
 
-typedef struct {
+struct __attribute__((packed)) gdt_entry {
   uint32_t limit_lo : 16;
   uint32_t base_lo : 16;
 
@@ -22,11 +22,13 @@ typedef struct {
   uint32_t granularity : 1;
   
   uint32_t base_hi : 8;
-}__attribute__((packed)) gdt_entry;
+};
 
-typedef struct {
+struct __attribute__((packed)) gdt_descr {
   uint16_t size;
   uint32_t offset;
-}__attribute__((packed)) gdt_descr;
+};
+
+void init_gdt();
 
 #endif

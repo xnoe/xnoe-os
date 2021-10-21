@@ -3,10 +3,8 @@
 gdt_entry gdt[] = {
   (gdt_entry){ // Null Segment
     .limit_lo = 0,
-    .limit_hi = 0,
     .base_lo = 0,
     .base_mid = 0,
-    .base_hi = 0,
     .accessed = 0,
     .read_write = 0,
     .direction = 0,
@@ -14,17 +12,16 @@ gdt_entry gdt[] = {
     .system_segment = 0,
     .privilege = 0,
     .present = 0,
+    .limit_hi = 0,
+    .__ignored__ = 0,
     .size = 0,
     .granularity = 0,
-
-    .__ignored__ = 0,
+    .base_hi = 0,
   },
   (gdt_entry){ // Code Segment
     .limit_lo = 0xffff,
-    .limit_hi = 0xf,
     .base_lo = 0,
     .base_mid = 0,
-    .base_hi = 0,
     .accessed = 0,
     .read_write = 1,
     .direction = 0,
@@ -32,17 +29,16 @@ gdt_entry gdt[] = {
     .system_segment = 1,
     .privilege = 0,
     .present = 1,
+    .limit_hi = 0xf,
+    .__ignored__ = 0,
     .size = 1,
     .granularity = 1,
-
-    .__ignored__ = 0,
+    .base_hi = 0
   },
   (gdt_entry){ // Data Segment
     .limit_lo = 0xffff,
-    .limit_hi = 0xf,
     .base_lo = 0,
     .base_mid = 0,
-    .base_hi = 0,
     .accessed = 0,
     .read_write = 1,
     .direction = 0,
@@ -50,11 +46,11 @@ gdt_entry gdt[] = {
     .system_segment = 1,
     .privilege = 0,
     .present = 1,
-
+    .limit_hi = 0xf,
+    .__ignored__ = 0,
     .size = 1,
     .granularity = 1,
-
-    .__ignored__ = 0,
+    .base_hi = 0
   }
 };
 

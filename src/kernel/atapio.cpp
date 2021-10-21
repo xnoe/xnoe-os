@@ -66,7 +66,7 @@ void init_atapio() {
 
   // We've initialised now, let's load the FAT and RootDirEntries.
   read_sectors(sectorsPerFAT * countFATs + countReserved, countRDEs / 16, rootDirEntries);
-  read_sectors(countReserved, sectorsPerFAT, FAT1);
+  read_sectors(countReserved, sectorsPerFAT, (uint8_t*)FAT1);
 }
 
 void read_sector(uint32_t address, uint8_t* buffer) {
@@ -101,7 +101,7 @@ uint16_t file_exists(char* filename) {
   for (int i=0; i<countRDEs; i++) {
     bool found = strcmp(rootDirEntries+(i*32), filename, 11);
     if (found) {
-      uint16_t* correctEntry = (rootDirEntries+(i*32));
+      uint16_t* correctEntry = (uint16_t*)(rootDirEntries+(i*32));
       return correctEntry[13];
     }
   }

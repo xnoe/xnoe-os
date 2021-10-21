@@ -69,7 +69,7 @@ int int_to_decimal(unsigned int number, char* string_buffer) {
   return (index+1);
 }
 
-char dec_to_hex[16] = "0123456789abcdef";
+char dec_to_hex[17] = "0123456789abcdef";
 int int_to_hex(unsigned int number, char* string_buffer) { 
   for (int i=0; i<8; i++)
     string_buffer[i] = '0';

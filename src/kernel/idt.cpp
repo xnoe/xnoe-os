@@ -14,18 +14,18 @@ void set_entry(uint8_t interrupt_number, uint16_t code_segment, void* handler, u
   };
 }
 
-__attribute__((interrupt)) void interrupt_20(struct interrupt_frame* frame) {
+__attribute__((interrupt)) void interrupt_20(interrupt_frame* frame) {
 //  printf("Interrupt 20 received!!\n");
   outb(0x20, 0x20);
 }
 
-__attribute__((interrupt)) void page_fault(struct interrupt_frame* frame, uint32_t err_code) {
+__attribute__((interrupt)) void page_fault(interrupt_frame* frame, uint32_t err_code) {
   uint32_t problem_address;
   asm("mov %%cr2, %0" : "=a" (problem_address) :);
   printf("Page Fault at %x\n", problem_address);
 }
 
-__attribute__((interrupt)) void ignore_interrupt(struct interrupt_frame* frame) {
+__attribute__((interrupt)) void ignore_interrupt(interrupt_frame* frame) {
   outb(0x20, 0x20);
 }
 
