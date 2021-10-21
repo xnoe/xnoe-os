@@ -19,8 +19,14 @@ __attribute__((interrupt)) void interrupt_20(struct interrupt_frame* frame) {
   outb(0x20, 0x20);
 }
 
+__attribute__((interrupt)) void page_fault(struct interrupt_frame* frame, uint32_t err_code) {
+  uint32_t problem_address;
+  asm("mov %%cr2, %0" : "=a" (problem_address) :);
+  printf("Page Fault at %x\n", problem_address);
+}
+
 __attribute__((interrupt)) void ignore_interrupt(struct interrupt_frame* frame) {
-  // Do nothing
+  outb(0x20, 0x20);
 }
 
 void init_idt() {
@@ -30,6 +36,7 @@ void init_idt() {
     set_entry(i, 0x08, &ignore_interrupt, 0x8E);
   
   set_entry(0x20, 0x08, &interrupt_20, 0x8E);
+  set_entry(0xE, 0x08, &page_fault, 0x8E);
 
   outb(0x20, 0x11);
   outb(0xA0, 0x11);

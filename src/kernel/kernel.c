@@ -72,6 +72,9 @@ int main() {
       
       load_file(filenamebuffer, filebuffer);
       printf(filebuffer);
+    } else if (strcmp(buffer, "pagefault", 9)) {
+      uint32_t* bad_addr = 0xdeadbeef;
+      uint32_t a = *bad_addr;
     } else {
       char filenamebuffer[12];
       decode_filename(buffer, filenamebuffer);
