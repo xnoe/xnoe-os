@@ -1,11 +1,5 @@
 #include "paging.h"
 
-struct __attribute__((packed)) split_addr {
-  uint32_t page_offset : 12;
-  uint32_t pt_index : 10;
-  uint32_t pd_index : 10;
-};
-
 void map_4k_phys_to_virt(uint32_t physical, uint32_t virt, PDE* page_directory, PTE** page_tables) {
   split_addr* split = (split_addr*)&virt;
 
@@ -59,4 +53,8 @@ void unmap_4k_virt(uint32_t virt, PDE* page_directory, PTE** page_tables) {
     .available = 0,
     .address = 0
   };
+}
+
+uint32_t PDE::getPhysicalPTAddress() {
+  return this->address << 12;
 }

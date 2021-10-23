@@ -8,17 +8,22 @@
 #include "gdt.h"
 #include "paging.h"
 #include "allocate.h"
+#include "memory.h"
 
 int main() {
   init_gdt();
+
+  PageDirectory kernel_pd = PageDirectory(0xc0100000, 0x120000, 0xbffe0000);
+  kernel_pd.select();
+  kernel_pd.map(0x0, 0x400000);
+  //kernel_pd.unmap(0x8000);
+
   init_idt();
   init_term();
 
   printf("Hello, World!\n\nWe are running XnoeOS Code in C now, Protected Mode has been achieved (as well as Virtual Memory / Paging!!!) and everything is working super nicely!\n\nHow wonderful!\n\nNow I just need to hope my print function works properly too~~\n");
   
   printf("KERNEL OK!\n");
-
-  unmap_4k_virt(0x8000, kernel_page_directory, kernel_page_tables);
 
   init_keyboard();
   

@@ -108,6 +108,7 @@ void main() {
 
   // Page Directory
   PDE* kernel_page_directory = bitmap + 0x20000;
+
   // Clear the PD 
   memset((uint8_t*)kernel_page_directory, 4096, 0);
 
@@ -120,6 +121,23 @@ void main() {
   }
 
   PTE** kernel_page_tables = 0x521000;
+
+  for (int i = 0; i < 1023; i++) {
+    kernel_page_directory[i] = (PDE){
+      .address = (uint32_t)(kernel_page_tables[i]) >> 12,
+      .available = 0,
+      .page_4mb = 0,
+      .accessed = 0,
+      .disable_cache = 0,
+      .write_through_cache = 0,
+      .privilege = 0,
+      .present = 1,
+      .read_write = 1,
+
+      .ignored = 0,
+      .ignored2 = 0
+    };
+  }
 
   // Mark unavailable bitmap to 0x522000
   mark_unavailble(bitmap, 0x4000000);

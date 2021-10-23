@@ -69,3 +69,15 @@ void* dumb_alloc(uint32_t size) {
 
   return (void*)ptr;
 }
+
+xnoe::tuple<uint32_t, void*> alloc_page_with_phys() {
+  uint32_t ptr = kernel_allocate_area;
+
+  for (; get_bit(last_free_page, bitmap) == 0; last_free_page++);
+  uint32_t phys_addr = last_free_page * 4096;
+  mark_unavailble(phys_addr, 4096);
+  map_4k_phys_to_virt(phys_addr, kernel_allocate_area, kernel_page_directory, kernel_page_tables);
+  kernel_allocate_area += 4096;
+
+  return xnoe::tuple<uint32_t, void*>(phys_addr, (void*)ptr);
+}

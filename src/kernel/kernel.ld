@@ -10,5 +10,6 @@ SECTIONS {
     build/kernel/entry.o(.text)
     build/kernel/kernel.o(.text)
     build/kernel/*(.text)
+    build/kernel/datatypes/*(.text)
   }
 }
