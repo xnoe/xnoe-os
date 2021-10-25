@@ -22,8 +22,8 @@ int main() {
 
   Allocator kernel_allocator = Allocator(&kernel_pd, &phys_pm, &virt_pm, 0xd0000000);
 
-  void* alloc = kernel_allocator.allocate(4096);
-  void* alloc2 = kernel_allocator.allocate(4096);
+  uint8_t* test2 = new(&kernel_allocator)uint8_t;
+  uint8_t* test = new(&kernel_allocator)uint8_t[1024];
 
   init_idt();
   init_term();
@@ -32,7 +32,7 @@ int main() {
   
   printf("KERNEL OK!\n");
 
-  printf("Alloc: %x\nAlloc2: %x\n", alloc, alloc2);
+  printf("Test: %x\nTest 2:%x\n", test, test2);
 
   init_keyboard();
   

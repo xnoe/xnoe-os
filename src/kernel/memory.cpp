@@ -176,7 +176,7 @@ Allocator::Allocator(PageDirectory* page_directory, PageMap* phys, PageMap* virt
 }
 
 void* Allocator::allocate(uint32_t size) {
-  uint32_t count = (size + (4096%size)) / 4096;
+  uint32_t count = (size + (4096 - size % 4096)) / 4096;
 
   uint32_t virt_addr = virt->find_next_available_from(this->virt_alloc_base, count);
   this->virt->mark_unavailable(virt_addr, count);
@@ -197,4 +197,20 @@ void Allocator::deallocate(uint32_t virt_addr) {
 
   phys->mark_available(phys_addr);
   virt->mark_unavailable(virt_addr);
+}
+
+void* operator new (uint32_t size, Allocator* allocator) {
+  return allocator->allocate(size);
+}
+
+void operator delete (void* ptr, Allocator* allocator) {
+  allocator->deallocate((uint32_t)ptr);
+}
+
+void* operator new[] (uint32_t size, Allocator* allocator) {
+  return allocator->allocate(size);
+}
+
+void operator delete[] (void* ptr, Allocator* allocator) {
+  allocator->deallocate((uint32_t)ptr);
 }

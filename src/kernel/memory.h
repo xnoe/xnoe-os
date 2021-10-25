@@ -83,12 +83,20 @@ public:
 void* operator new (uint32_t size, Allocator* allocator);
 void operator delete (void* ptr, Allocator* allocator);
 
+void* operator new[] (uint32_t size, Allocator* allocator);
+void operator delete[] (void* ptr, Allocator* allocator);
+
+
 class Process : protected Allocator {
 private:
   uint32_t PID;
 
 public:
   Process(uint32_t PID);
+};
+
+class Kernel : private Process {
+
 };
 
 #endif
