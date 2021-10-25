@@ -16,7 +16,7 @@ int main() {
   PageDirectory kernel_pd = PageDirectory(0xc0100000, 0x120000, 0xbffe0000);
   kernel_pd.select();
   kernel_pd.map(0x0, 0x400000);
-  //kernel_pd.unmap(0x8000);
+  kernel_pd.unmap(0x8000);
 
   init_idt();
   init_term();

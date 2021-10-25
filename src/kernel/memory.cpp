@@ -10,6 +10,67 @@ void memcpy(uint8_t* src, uint8_t* dst, uint32_t count) {
     dst[i] = src[i];
 }
 
+void PageMap::set_bit(uint32_t index) {
+  uint32_t offset = index % 8;
+  uint32_t i = index / 8;
+  
+  pagemap[i] |= 1<<(7-offset);
+}
+
+void PageMap::unset_bit(uint32_t index) {
+  uint32_t offset = index % 8;
+  uint32_t i = index / 8;
+  
+  pagemap[i] &= 255 - (1<<(7-offset));
+}
+
+bool PageMap::bit_set(uint32_t index) {
+  uint32_t offset = index % 8;
+  uint32_t i = index / 8;
+
+  return pagemap[i] & 1<<(7-offset);
+}
+
+void PageMap::mark_unavailable(uint32_t address) {
+  unset_bit(address >> 12);
+}
+
+void PageMap::mark_unavailable(uint32_t address, uint32_t count) {
+  for (int i=0; i<count; i++)
+    unset_bit((address >> 12) + i);
+}
+
+void PageMap::mark_available(uint32_t address) {
+  set_bit(address >> 12);
+}
+
+void PageMap::mark_available(uint32_t address, uint32_t count) {
+  for (int i=0; i<count; i++)
+    set_bit((address >> 12) + i);
+}
+
+bool PageMap::available(uint32_t address) {
+  return bit_set(address >> 4096);
+}
+
+uint32_t PageMap::find_next_available_from(uint32_t address) {
+  while (!available(address)) address += 4096;
+
+  return address;
+}
+
+uint32_t PageMap::find_next_available_from(uint32_t address, uint32_t count) {
+  while (1) {
+    while (!available(address)) address += 4096;
+
+    for (int a=address, i=0; i<count; i++, a+=4096)
+      if (!available(address))
+        continue;
+    
+    return address;
+  }
+}
+
 PageTable::PageTable(uint32_t phys, uint32_t virt) {
   phys_addr = phys;
   virt_addr = virt;
@@ -51,6 +112,10 @@ void PageTable::unmap_table(uint32_t index) {
   };
 }
 
+uint32_t PageTable::get_physical_address(uint32_t index) {
+  return page_table[index].address << 12;
+}
+
 PageDirectory::PageDirectory(PDE* page_directory, uint32_t phys_addr, uint32_t offset) {
   this->page_directory = page_directory;
   this->phys_addr = phys_addr;
@@ -86,6 +151,40 @@ void PageDirectory::unmap(uint32_t virt) {
   page_tables[split->pd_index].unmap_table(split->pt_index);
 }
 
+uint32_t PageDirectory::virtual_to_physical(uint32_t virt) {
+  split_addr* split = (split_addr*)&virt;
+  return page_tables[split->pd_index].get_physical_address(split->pt_index);
+}
+
 void PageDirectory::select() {
   asm volatile("mov %0, %%eax; mov %%eax, %%cr3" : : "m" (phys_addr));
+}
+
+PageMap* Allocator::phys;
+
+Allocator::Allocator(PageDirectory* page_directory, PageMap* phys, PageMap* virt) {
+  PD = page_directory;
+  phys = phys;
+  virt = virt;
+
+  remaining = 0;
+}
+
+void* Allocator::allocate() {
+  uint32_t phys_addr = phys->find_next_available_from(0);
+  uint32_t virt_addr = virt->find_next_available_from(virt_alloc_base);
+
+  phys->mark_unavailable(phys_addr);
+  virt->mark_unavailable(virt_addr);
+
+  PD->map(phys, virt);
+}
+
+void Allocator::deallocate(uint32_t virt_addr) {
+  uint32_t phys_addr = PD->virtual_to_physical(virt_addr);
+
+  PD->unmap(virt_addr);
+
+  phys->mark_available(phys_addr);
+  virt->mark_unavailable(virt_addr);
 }

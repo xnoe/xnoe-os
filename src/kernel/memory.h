@@ -16,11 +16,21 @@ private:
   void set_bit(uint32_t index);
   void unset_bit(uint32_t index);
 
+  bool bit_set(uint32_t index);
+
 public:
   PageMap(uint8_t* map);
 
-  void mark_unavailble(uint32_t page);
-  void mark_available(uint32_t page);
+  void mark_unavailable(uint32_t address);
+  void mark_unavailable(uint32_t address, uint32_t count);
+
+  void mark_available(uint32_t address);
+  void mark_available(uint32_t address, uint32_t count);
+
+  bool available(uint32_t address);
+
+  uint32_t find_next_available_from(uint32_t address);
+  uint32_t find_next_available_from(uint32_t address, uint32_t count);
 };
 
 struct PageTable {
@@ -34,6 +44,8 @@ struct PageTable {
 
   void map_table(uint32_t index, uint32_t addr);
   void unmap_table(uint32_t index);
+
+  uint32_t get_physical_address(uint32_t index);
 };
 
 class PageDirectory {
@@ -47,26 +59,28 @@ public:
   PageDirectory(PDE* page_directories, uint32_t phys_addr, uint32_t offset);
 
   void map(uint32_t phys, uint32_t virt);
-
   void unmap(uint32_t virt);
+
+  uint32_t virtual_to_physical(uint32_t virt);
 
   void select();
 };
 
 class Allocator {
 protected:
-  static PageMap phys;
-  PageMap virt;
+  static PageMap* phys;
+  PageMap* virt;
 
-  PageDirectory PD;
+  PageDirectory* PD;
 
-  uint32_t current_page_index;
+  uint32_t current_alloc_address;
   uint32_t remaining;
+
+  uint32_t virt_alloc_base;
 public:
-  Allocator();
-  Allocator(PageDirectory page_directory, PageMap phys, PageMap virt);
-  void* allocate();
-  void deallocate();
+  Allocator(PageDirectory* page_directory, PageMap* phys, PageMap* virt);
+  virtual void* allocate();
+  virtual void deallocate(uint32_t virt_addr);
 };
 
 class Process : protected Allocator {
