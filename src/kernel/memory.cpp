@@ -1,4 +1,5 @@
 #include "memory.h"
+#include "screenstuff.h"
 
 void memset(uint8_t* address, uint32_t count, uint8_t value) {
   for (int i=0; i<count; i++)
@@ -8,6 +9,10 @@ void memset(uint8_t* address, uint32_t count, uint8_t value) {
 void memcpy(uint8_t* src, uint8_t* dst, uint32_t count) {
   for (int i = 0; i<count; i++)
     dst[i] = src[i];
+}
+
+PageMap::PageMap(uint32_t map) {
+  this->pagemap = (uint8_t*)map;
 }
 
 void PageMap::set_bit(uint32_t index) {
@@ -50,7 +55,7 @@ void PageMap::mark_available(uint32_t address, uint32_t count) {
 }
 
 bool PageMap::available(uint32_t address) {
-  return bit_set(address >> 4096);
+  return bit_set(address >> 12);
 }
 
 uint32_t PageMap::find_next_available_from(uint32_t address) {
@@ -64,7 +69,7 @@ uint32_t PageMap::find_next_available_from(uint32_t address, uint32_t count) {
     while (!available(address)) address += 4096;
 
     for (int a=address, i=0; i<count; i++, a+=4096)
-      if (!available(address))
+      if (!available(a))
         continue;
     
     return address;
@@ -162,22 +167,27 @@ void PageDirectory::select() {
 
 PageMap* Allocator::phys;
 
-Allocator::Allocator(PageDirectory* page_directory, PageMap* phys, PageMap* virt) {
-  PD = page_directory;
-  phys = phys;
-  virt = virt;
+Allocator::Allocator(PageDirectory* page_directory, PageMap* phys, PageMap* virt, uint32_t virt_alloc_base) {
+  this->PD = page_directory;
+  this->phys = phys;
+  this->virt = virt;
 
-  remaining = 0;
+  this->virt_alloc_base = virt_alloc_base;
 }
 
-void* Allocator::allocate() {
-  uint32_t phys_addr = phys->find_next_available_from(0);
-  uint32_t virt_addr = virt->find_next_available_from(virt_alloc_base);
+void* Allocator::allocate(uint32_t size) {
+  uint32_t count = (size + (4096%size)) / 4096;
 
-  phys->mark_unavailable(phys_addr);
-  virt->mark_unavailable(virt_addr);
+  uint32_t virt_addr = virt->find_next_available_from(this->virt_alloc_base, count);
+  this->virt->mark_unavailable(virt_addr, count);
 
-  PD->map(phys, virt);
+  for (int i=0; i<count; i++) {
+    uint32_t phys_addr = this->phys->find_next_available_from(0);
+    this->phys->mark_unavailable(phys_addr);
+    this->PD->map(phys_addr, virt_addr + 4096 * i);
+  }
+
+  return virt_addr;
 }
 
 void Allocator::deallocate(uint32_t virt_addr) {

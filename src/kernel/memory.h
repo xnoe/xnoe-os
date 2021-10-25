@@ -11,7 +11,7 @@ void memcpy(uint8_t* src, uint8_t* dst, uint32_t count);
 
 class __attribute__((packed)) PageMap {
 private:
-  uint8_t pagemap[1024^2 / 8];
+  uint8_t* pagemap;
 
   void set_bit(uint32_t index);
   void unset_bit(uint32_t index);
@@ -19,7 +19,7 @@ private:
   bool bit_set(uint32_t index);
 
 public:
-  PageMap(uint8_t* map);
+  PageMap(uint32_t map);
 
   void mark_unavailable(uint32_t address);
   void mark_unavailable(uint32_t address, uint32_t count);
@@ -73,15 +73,15 @@ protected:
 
   PageDirectory* PD;
 
-  uint32_t current_alloc_address;
-  uint32_t remaining;
-
   uint32_t virt_alloc_base;
 public:
-  Allocator(PageDirectory* page_directory, PageMap* phys, PageMap* virt);
-  virtual void* allocate();
+  Allocator(PageDirectory* page_directory, PageMap* phys, PageMap* virt, uint32_t virt_alloc_base);
+  virtual void* allocate(uint32_t size);
   virtual void deallocate(uint32_t virt_addr);
 };
+
+void* operator new (uint32_t size, Allocator* allocator);
+void operator delete (void* ptr, Allocator* allocator);
 
 class Process : protected Allocator {
 private:

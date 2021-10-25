@@ -1,6 +1,6 @@
 [BITS 32]
 
 _start:
-  call main
+  jmp main
 
 extern main

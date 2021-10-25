@@ -15,8 +15,15 @@ int main() {
 
   PageDirectory kernel_pd = PageDirectory(0xc0100000, 0x120000, 0xbffe0000);
   kernel_pd.select();
-  kernel_pd.map(0x0, 0x400000);
   kernel_pd.unmap(0x8000);
+
+  PageMap phys_pm(0xc0600000);
+  PageMap virt_pm(0xc0620000);
+
+  Allocator kernel_allocator = Allocator(&kernel_pd, &phys_pm, &virt_pm, 0xd0000000);
+
+  void* alloc = kernel_allocator.allocate(4096);
+  void* alloc2 = kernel_allocator.allocate(4096);
 
   init_idt();
   init_term();
@@ -24,6 +31,8 @@ int main() {
   printf("Hello, World!\n\nWe are running XnoeOS Code in C now, Protected Mode has been achieved (as well as Virtual Memory / Paging!!!) and everything is working super nicely!\n\nHow wonderful!\n\nNow I just need to hope my print function works properly too~~\n");
   
   printf("KERNEL OK!\n");
+
+  printf("Alloc: %x\nAlloc2: %x\n", alloc, alloc2);
 
   init_keyboard();
   
