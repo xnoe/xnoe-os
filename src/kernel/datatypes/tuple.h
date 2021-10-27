@@ -18,12 +18,12 @@ namespace xnoe {
 
     tuple(const T& head, const Tail& ... tail)
       : head(head), tail(tail...) {}
-
-    template<int index>
-    auto get() {
-      return tupleGetHelper<index, tuple<T, Tail...>>::get(*this);
-    }
   };
+
+  template<int index, typename ... Types>
+  auto get(xnoe::tuple<Types ...> tuple) {
+    return tupleGetHelper<index, xnoe::tuple<Types ...>>::get(tuple);
+  }
 
   template<typename T, typename ... Tail>
   class tupleGetHelper<0, tuple<T, Tail...>> {
