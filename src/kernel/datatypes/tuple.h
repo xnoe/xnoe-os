@@ -16,6 +16,7 @@ namespace xnoe {
     T head;
     tuple<Tail...> tail;
 
+    tuple() {}
     tuple(const T& head, const Tail& ... tail)
       : head(head), tail(tail...) {}
   };

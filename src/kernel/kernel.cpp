@@ -9,9 +9,12 @@
 #include "paging.h"
 #include "allocate.h"
 #include "memory.h"
+#include "process.h"
+#include "datatypes/hashtable.h"
 
 int main() {
   init_gdt();
+  init_term();
 
   PageDirectory kernel_pd = PageDirectory(0xc0100000, 0x120000, 0xbffe0000);
   kernel_pd.select();
@@ -22,17 +25,25 @@ int main() {
 
   Allocator kernel_allocator = Allocator(&kernel_pd, &phys_pm, &virt_pm, 0xd0000000);
 
-  uint8_t* test2 = new(&kernel_allocator)uint8_t;
-  uint8_t* test = new(&kernel_allocator)uint8_t[1024];
+  xnoe::hashtable<void*, uint32_t>* kproc_hashtable = new (&kernel_allocator) xnoe::hashtable<void*, uint32_t>(&kernel_allocator);
+
+  Process kernel_process = Process(0, kproc_hashtable, &kernel_pd, &phys_pm, &virt_pm, 0xd0000000);
+
+  uint32_t* test = new(&kernel_process)uint32_t;
+  uint32_t* test2 = new(&kernel_process)uint32_t;
+  uint32_t* test3 = new(&kernel_process)uint32_t[1024];
+
+  *test = 0xdead;
+  *test2 = 0xbeef;
 
   init_idt();
-  init_term();
 
   printf("Hello, World!\n\nWe are running XnoeOS Code in C now, Protected Mode has been achieved (as well as Virtual Memory / Paging!!!) and everything is working super nicely!\n\nHow wonderful!\n\nNow I just need to hope my print function works properly too~~\n");
   
   printf("KERNEL OK!\n");
 
-  printf("Test: %x\nTest 2:%x\n", test, test2);
+  printf("Test  :%x\nTest 2:%x\nTest 3:%x\n", test, test2, test3);
+  printf("Test value  :%x\nTest 2 value:%x\n", *test, *test2);
 
   init_keyboard();
   
@@ -43,7 +54,7 @@ int main() {
 
   read_sector(0, sector);
 
-  uint8_t* filebuffer = (uint8_t*)dumb_alloc(0x3000);
+  uint8_t* filebuffer = new(&kernel_process)uint8_t[0x3000];
 
   while (1) {
     printf(">>> ");

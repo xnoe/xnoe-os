@@ -3,7 +3,7 @@
 
 #include "hash.h"
 #include "linkedlist.h"
-#include "memory.h"
+#include "../memory.h"
 
 namespace xnoe {
   template <class key, class value>

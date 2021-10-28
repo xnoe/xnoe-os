@@ -1,7 +1,7 @@
 #ifndef LINKEDLIST_H
 #define LINKEDLIST_H
 
-#include "memory.h"
+#include "../memory.h"
 
 namespace xnoe {
   template<typename T>
@@ -10,10 +10,10 @@ namespace xnoe {
     linkedlistelem<T>* previous;
     linkedlistelem<T>* next;
 
-    linkedlistelem(T t, linkedlistelem<T>* p, linkedlistelem<T>* n) {
+    linkedlistelem(T t) {
       this->elem = t;
-      this->previous = p;
-      this->next = n;
+      this->previous = 0;
+      this->next = 0;
     }
   };
 
@@ -31,6 +31,8 @@ namespace xnoe {
 
     void prepend(linkedlistelem<T>* t) {
       this->start->previous = t;
+      t->next = this->start;
+      t->prev = 0;
       this->start = t;
     }
 
