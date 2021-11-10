@@ -12,8 +12,8 @@ namespace xnoe {
     xnoe::linkedlist<xnoe::tuple<key, value>>* table;
 
   public:
-    hashtable(Allocator* allocator) {
-      this->table = new(allocator) xnoe::linkedlist<xnoe::tuple<key, value>>[4096];
+    hashtable() {
+      this->table = new xnoe::linkedlist<xnoe::tuple<key, value>>[4096];
     }
 
     void set(key k, value v) {

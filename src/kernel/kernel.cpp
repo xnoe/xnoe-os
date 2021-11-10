@@ -10,6 +10,7 @@
 #include "allocate.h"
 #include "memory.h"
 #include "process.h"
+#include "global.h"
 #include "datatypes/hashtable.h"
 
 int main() {
@@ -24,41 +25,32 @@ int main() {
   PageMap virt_pm(0xc0620000);
 
   Allocator kernel_allocator = Allocator(&kernel_pd, &phys_pm, &virt_pm, 0xd0000000);
+  Global::allocator = &kernel_allocator;
 
-  xnoe::hashtable<void*, uint32_t>* kproc_hashtable = new (&kernel_allocator) xnoe::hashtable<void*, uint32_t>(&kernel_allocator);
-
-  Process kernel_process = Process(0, kproc_hashtable, &kernel_pd, &phys_pm, &virt_pm, 0xd0000000);
-
-  uint32_t* test = new(&kernel_process)uint32_t;
-  uint32_t* test2 = new(&kernel_process)uint32_t;
-  uint32_t* test3 = new(&kernel_process)uint32_t[1024];
-
-  *test = 0xdead;
-  *test2 = 0xbeef;
+  Process kernel_process = Process(0, &kernel_pd, &phys_pm, &virt_pm, 0xd0000000);
+  Global::allocator = &kernel_process;
 
   init_idt();
 
-  printf("Hello, World!\n\nWe are running XnoeOS Code in C now, Protected Mode has been achieved (as well as Virtual Memory / Paging!!!) and everything is working super nicely!\n\nHow wonderful!\n\nNow I just need to hope my print function works properly too~~\n");
+  printf("Hello, World!\n\nWe are running XnoeOS Code in C++ now, Protected Mode has been achieved (as well as Virtual Memory / Paging!!!) and everything is working super nicely!\n\nHow wonderful!\n\nNow I just need to hope my print function works properly too~~\n");
   
   printf("KERNEL OK!\n");
-
-  printf("Test  :%x\nTest 2:%x\nTest 3:%x\n", test, test2, test3);
-  printf("Test value  :%x\nTest 2 value:%x\n", *test, *test2);
 
   init_keyboard();
   
   enable_idt();
   init_atapio();
 
-  uint8_t sector[512];
+  uint8_t* filebuffer = new uint8_t[0x3000];
 
-  read_sector(0, sector);
-
-  uint8_t* filebuffer = new(&kernel_process)uint8_t[0x3000];
+  char* buffer = 0;
 
   while (1) {
+    if (buffer)
+      delete[] buffer;
+    buffer = new char[128];
+    printf("Buffer allocations: %d\n", kernel_process.count_allocations(buffer));
     printf(">>> ");
-    char buffer[128];
     for (int i=0; i<128; i++)
       buffer[i] = 0;
     readline(128, buffer);

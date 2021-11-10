@@ -23,6 +23,7 @@ __attribute__((interrupt)) void page_fault(interrupt_frame* frame, uint32_t err_
   uint32_t problem_address;
   asm("mov %%cr2, %0" : "=a" (problem_address) :);
   printf("Page Fault at %x\n", problem_address);
+  asm("hlt");
 }
 
 __attribute__((interrupt)) void ignore_interrupt(interrupt_frame* frame) {

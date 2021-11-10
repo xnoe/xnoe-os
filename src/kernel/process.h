@@ -5,7 +5,17 @@
 #include "memory.h"
 #include "datatypes/linkedlist.h"
 #include "datatypes/hashtable.h"
+#include "datatypes/maybe.h"
 #include "screenstuff.h"
+#include "global.h"
+
+struct AllocTracker {
+  void* page_base;
+  uint32_t page_size;
+  uint32_t alloc_count;
+
+  AllocTracker(void* base, uint32_t size, uint32_t count);
+};
 
 class Process : public Allocator {
 private:
@@ -14,20 +24,32 @@ private:
   uint32_t last_page_pointer;
   uint32_t page_remaining;
 
-  // List of tuples tracking allocation base addresses and lengths.
-  xnoe::linkedlist<xnoe::tuple<uint32_t, uint32_t>> allocations;
-  // Maps pointers to the position in the linked list.
-  xnoe::hashtable<void*, uint32_t>* allocmap;
+  // List of pages this process has allocated
+  xnoe::linkedlist<AllocTracker> allocations;
+
+  xnoe::Maybe<xnoe::linkedlistelem<AllocTracker>*> get_alloc_tracker(uint32_t address);
 
 public:
-  Process(uint32_t PID, xnoe::hashtable<void*, uint32_t>* table, PageDirectory* page_directory, PageMap* phys, PageMap* virt, uint32_t virt_alloc_base);
+  Process(uint32_t PID, PageDirectory* page_directory, PageMap* phys, PageMap* virt, uint32_t virt_alloc_base);
 
   void* allocate(uint32_t size) override;
   void deallocate(uint32_t virt_addr) override;
+
+  uint32_t count_allocations(uint32_t address);
 };
 
-class Kernel : private Process {
+class Kernel : public Process {
+public:
+  static Allocator* global_allocator;
 
+  Kernel(PageDirectory* page_directory, PageMap* phys, PageMap* virt, uint32_t virt_alloc_base);
 };
+
+void* operator new (uint32_t size);
+void operator delete (void* ptr);
+void operator delete (void* ptr, unsigned int size);
+
+void* operator new[] (uint32_t size);
+void operator delete[] (void* ptr);
 
 #endif

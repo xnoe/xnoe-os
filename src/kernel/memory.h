@@ -80,10 +80,4 @@ public:
   virtual void deallocate(uint32_t virt_addr);
 };
 
-void* operator new (uint32_t size, Allocator* allocator);
-void operator delete (void* ptr, Allocator* allocator);
-
-void* operator new[] (uint32_t size, Allocator* allocator);
-void operator delete[] (void* ptr, Allocator* allocator);
-
 #endif

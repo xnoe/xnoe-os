@@ -149,11 +149,13 @@ void PageDirectory::map(uint32_t phys, uint32_t virt) {
   };
 
   page_tables[split->pd_index].map_table(split->pt_index, phys >> 12);
+  asm volatile ("invlpg (%0)" : : "r" (virt) : "memory");
 }
 
 void PageDirectory::unmap(uint32_t virt) {
   split_addr* split = (split_addr*)&virt;
   page_tables[split->pd_index].unmap_table(split->pt_index);
+  asm volatile ("invlpg (%0)" : : "r" (virt) : "memory");
 }
 
 uint32_t PageDirectory::virtual_to_physical(uint32_t virt) {
@@ -196,21 +198,5 @@ void Allocator::deallocate(uint32_t virt_addr) {
   PD->unmap(virt_addr);
 
   phys->mark_available(phys_addr);
-  virt->mark_unavailable(virt_addr);
-}
-
-void* operator new (uint32_t size, Allocator* allocator) {
-  return allocator->allocate(size);
-}
-
-void operator delete (void* ptr, Allocator* allocator) {
-  allocator->deallocate((uint32_t)ptr);
-}
-
-void* operator new[] (uint32_t size, Allocator* allocator) {
-  return allocator->allocate(size);
-}
-
-void operator delete[] (void* ptr, Allocator* allocator) {
-  allocator->deallocate((uint32_t)ptr);
+  virt->mark_available(virt_addr);
 }
