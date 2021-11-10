@@ -52,7 +52,6 @@ void* Process::allocate(uint32_t size) {
 
     ptr += elem_size;
   }
-  printf("ptr: %x\nPage Remaining: %d\n", this->last_page_pointer, this->page_remaining, ptr);
   return ptr;
 }
 

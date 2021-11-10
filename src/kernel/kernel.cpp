@@ -49,7 +49,6 @@ int main() {
     if (buffer)
       delete[] buffer;
     buffer = new char[128];
-    printf("Buffer allocations: %d\n", kernel_process.count_allocations(buffer));
     printf(">>> ");
     for (int i=0; i<128; i++)
       buffer[i] = 0;
