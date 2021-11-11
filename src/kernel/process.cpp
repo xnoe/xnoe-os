@@ -83,28 +83,6 @@ uint32_t Process::count_allocations(uint32_t address) {
     return 0;
 }
 
-Allocator* Global::allocator;
-
 Kernel::Kernel(PageDirectory* page_directory, PageMap* phys, PageMap* virt, uint32_t virt_alloc_base)
   : Process(0, page_directory, phys, virt, virt_alloc_base)
 {}
-
-void* operator new (uint32_t size) {
-  return Global::allocator->allocate(size);
-}
-
-void operator delete (void* ptr) {
-  Global::allocator->deallocate((uint32_t)ptr);
-}
-
-void operator delete (void* ptr, unsigned int size) {
-  Global::allocator->deallocate((uint32_t)ptr);
-}
-
-void* operator new[] (uint32_t size) {
-  return Global::allocator->allocate(size);
-}
-
-void operator delete[] (void* ptr) {
-  Global::allocator->deallocate((uint32_t)ptr);
-}

@@ -24,6 +24,8 @@ private:
   uint32_t last_page_pointer;
   uint32_t page_remaining;
 
+  void* stack;
+
   // List of pages this process has allocated
   xnoe::linkedlist<AllocTracker> allocations;
 
@@ -44,12 +46,5 @@ public:
 
   Kernel(PageDirectory* page_directory, PageMap* phys, PageMap* virt, uint32_t virt_alloc_base);
 };
-
-void* operator new (uint32_t size);
-void operator delete (void* ptr);
-void operator delete (void* ptr, unsigned int size);
-
-void* operator new[] (uint32_t size);
-void operator delete[] (void* ptr);
 
 #endif
