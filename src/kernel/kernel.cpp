@@ -12,6 +12,7 @@
 #include "process.h"
 #include "global.h"
 #include "datatypes/hashtable.h"
+#include "terminal.h"
 
 int main() {
   init_gdt();
@@ -24,17 +25,24 @@ int main() {
   PageMap phys_pm(0xc0600000);
   PageMap virt_pm(0xc0620000);
 
-  Allocator kernel_allocator = Allocator(&kernel_pd, &phys_pm, &virt_pm, 0xd0000000);
-  Global::allocator = &kernel_allocator;
+  Kernel kernel = Kernel(&kernel_pd, &phys_pm, &virt_pm, 0xd0000000);
+  Global::allocator = &kernel;
 
-  Process kernel_process = Process(0, &kernel_pd, &phys_pm, &virt_pm, 0xd0000000);
-  Global::allocator = &kernel_process;
+  Terminal* current_term;
+
+  TextModeTerminal* term = new TextModeTerminal(0xc0501000);
+  current_term = term;
 
   init_idt();
 
-  printf("Hello, World!\n\nWe are running XnoeOS Code in C++ now, Protected Mode has been achieved (as well as Virtual Memory / Paging!!!) and everything is working super nicely!\n\nHow wonderful!\n\nNow I just need to hope my print function works properly too~~\n");
+  term->clear_screen();
+
+  term->printf("Hello, World!\n\nWe are running XnoeOS Code in C++ now, Protected Mode has been achieved (as well as Virtual Memory / Paging!!!) and everything is working super nicely!\n\nHow wonderful!\n\nNow I just need to hope my print function works properly too~~\n");
   
-  printf("KERNEL OK!\n");
+  term->printf("KERNEL OK!\n");
+  term->activate();
+
+  while (1);
 
   init_keyboard();
   

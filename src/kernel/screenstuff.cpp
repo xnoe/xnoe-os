@@ -54,38 +54,6 @@ void set_curpos(int x, int y) {
   cursor_y = y;
 }
 
-int int_to_decimal(unsigned int number, char* string_buffer) {
-  for (int i=0; i<11; i++)
-    string_buffer[i] = 0;
-  
-  int index = 9;
-  unsigned int acc = number;
-  if (acc == 0)
-    string_buffer[index--] = '0';
-  while (acc != 0) {
-    string_buffer[index--] = 0x30+(acc%10);
-    acc /= 10;
-  }
-  return (index+1);
-}
-
-char dec_to_hex[17] = "0123456789abcdef";
-int int_to_hex(unsigned int number, char* string_buffer) { 
-  for (int i=0; i<8; i++)
-    string_buffer[i] = '0';
-  string_buffer[8] = 0;
-  
-  int index = 7;
-  unsigned int acc = number;
-  if (acc == 0)
-    string_buffer[index--] = '0';
-  while (acc != 0) {
-    string_buffer[index--] = dec_to_hex[acc%0x10];
-    acc /= 0x10;
-  }
-  return (index+1);
-}
-
 void printf(const char* string, ...) {
   va_list ptr;
   va_start(ptr, string);
