@@ -1,5 +1,5 @@
-CFLAGS = -std=gnu11 -m32 -mgeneral-regs-only -nostdlib -fno-builtin -fno-exceptions -fno-leading-underscore -fno-pie -fno-stack-protector -Wno-pointer-to-int-cast
-CXXFLAGS = -m32 -fno-use-cxa-atexit -mgeneral-regs-only -nostdlib -fno-builtin -fno-rtti -fno-exceptions -fno-leading-underscore -fpermissive -fno-pie -fno-stack-protector -I.
+CFLAGS = -g -std=gnu11 -m32 -mgeneral-regs-only -nostdlib -fno-builtin -fno-exceptions -fno-leading-underscore -fno-pie -fno-stack-protector -Wno-pointer-to-int-cast
+CXXFLAGS = -g -m32 -fno-use-cxa-atexit -mgeneral-regs-only -nostdlib -fno-builtin -fno-rtti -fno-exceptions -fno-leading-underscore -fpermissive -fno-pie -fno-stack-protector -I.
 LDFLAGS = 
 
 DISK_IMG_FILES = build/kernel/kernel.bin hello.txt alpha.txt
@@ -11,6 +11,9 @@ STAGE2_OBS = build/c_code_entry.o build/boot_stage2/io.o build/boot_stage2/atapi
 
 run: disk.img
 	qemu-system-x86_64 disk.img
+
+debug: disk.img
+	qemu-system-x86_64 -s -S disk.img & gdb --command=gdbscript
 
 disk.img: clean prepare build/boot/boot.bin build/boot_stage2/boot.bin $(DISK_IMG_FILES)
 	dd if=/dev/zero of=disk.img count=43 bs=100k
@@ -43,7 +46,10 @@ build/boot_stage2/%.o: src/boot_stage2/%.c
 	gcc $(CFLAGS) -o $@ -c $<
 
 # Kernel
-build/kernel/kernel.bin: src/kernel/kernel.ld $(KERNEL_OBJS)
+build/kernel/kernel.bin: build/kernel/kernel.elf
+	objcopy -O binary build/kernel/kernel.elf build/kernel/kernel.bin
+
+build/kernel/kernel.elf: src/kernel/kernel.ld $(KERNEL_OBJS)
 	ld $(LDFLAGS) -T $< $(KERNEL_OBJS)
 
 build/boot_stage2/stage2.o: src/boot_stage2/main.c 

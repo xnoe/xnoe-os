@@ -4,3 +4,4 @@
 *.sector
 *.o
 img.d/
+build/
