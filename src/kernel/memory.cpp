@@ -1,5 +1,4 @@
 #include "memory.h"
-#include "screenstuff.h"
 
 void memset(uint8_t* address, uint32_t count, uint8_t value) {
   for (int i=0; i<count; i++)
@@ -13,6 +12,11 @@ void memcpy(uint8_t* src, uint8_t* dst, uint32_t count) {
 
 PageMap::PageMap(uint32_t map) {
   this->pagemap = (uint8_t*)map;
+}
+
+PageMap::PageMap() {
+  this->pagemap = new uint8_t[131072];
+  memset(this->pagemap, 131072, 0xff);
 }
 
 void PageMap::set_bit(uint32_t index) {
@@ -83,7 +87,12 @@ PageTable::PageTable(uint32_t phys, uint32_t virt) {
   page_table = (PTE*)virt;
 }
 
-PageTable::PageTable(){}
+PageTable::PageTable(){
+  virt_addr = new PTE[1024];
+  phys_addr = Global::allocator->virtual_to_physical(virt_addr);
+
+  page_table = (PTE*)virt_addr;
+}
 
 void PageTable::map_table(uint32_t index, uint32_t addr) {
   page_table[index] = (PTE){
@@ -122,6 +131,7 @@ uint32_t PageTable::get_physical_address(uint32_t index) {
 }
 
 PageDirectory::PageDirectory(PDE* page_directory, uint32_t phys_addr, uint32_t offset) {
+  this->page_tables = (PageTable*)this->__page_tables;
   this->page_directory = page_directory;
   this->phys_addr = phys_addr;
 
@@ -131,8 +141,18 @@ PageDirectory::PageDirectory(PDE* page_directory, uint32_t phys_addr, uint32_t o
   }
 }
 
+PageDirectory::PageDirectory() {
+  this->page_tables = (PageTable*)this->__page_tables;
+  this->page_directory = new PDE[1024];
+  memset((uint8_t*)this->page_tables, sizeof(PageTable) * 1024, 0);
+  this->phys_addr = Global::allocator->virtual_to_physical(this->page_directory);
+}
+
 void PageDirectory::map(uint32_t phys, uint32_t virt) {
   split_addr* split = (split_addr*)&virt;
+
+  if (!page_tables[split->pd_index].virt_addr)
+    page_tables[split->pd_index] = PageTable();
 
   page_directory[split->pd_index] = (PDE){
     .present = 1,
@@ -177,7 +197,15 @@ Allocator::Allocator(PageDirectory* page_directory, PageMap* phys, PageMap* virt
   this->virt_alloc_base = virt_alloc_base;
 }
 
+Allocator::Allocator(PageDirectory* page_directory, PageMap* virt, uint32_t virt_alloc_base) {
+  this->PD = page_directory;
+  this->virt = virt;
+
+  this->virt_alloc_base = virt_alloc_base;
+}
+
 void* Allocator::allocate(uint32_t size) {
+  asm("mov $0x0, 0x8a000");
   uint32_t count = (size + (4096 - size % 4096)) / 4096;
 
   uint32_t virt_addr = virt->find_next_available_from(this->virt_alloc_base, count);
@@ -186,6 +214,7 @@ void* Allocator::allocate(uint32_t size) {
   for (int i=0; i<count; i++) {
     uint32_t phys_addr = this->phys->find_next_available_from(0);
     this->phys->mark_unavailable(phys_addr);
+    asm("mov $0xdead, 0x8a000");
     this->PD->map(phys_addr, virt_addr + 4096 * i);
   }
 
@@ -199,4 +228,8 @@ void Allocator::deallocate(uint32_t virt_addr) {
 
   phys->mark_available(phys_addr);
   virt->mark_available(virt_addr);
+}
+
+uint32_t Allocator::virtual_to_physical(uint32_t virt) {
+  return PD->virtual_to_physical(virt);
 }

@@ -14,11 +14,20 @@ xnoe::Maybe<xnoe::linkedlistelem<AllocTracker>*> Process::get_alloc_tracker(uint
   return xnoe::Maybe<xnoe::linkedlistelem<AllocTracker>*>();
 }
 
-Process::Process(uint32_t PID, PageDirectory* page_directory, PageMap* phys, PageMap* virt, uint32_t virt_alloc_base)
+Process::Process(uint32_t PID, void* stack, PageDirectory* page_directory, PageMap* phys, PageMap* virt, uint32_t virt_alloc_base)
 : Allocator(page_directory, phys, virt, virt_alloc_base) {
   this->PID = PID;
   this->page_remaining = 0;
   this->last_page_pointer = virt_alloc_base;
+  this->stack = stack;
+}
+
+Process::Process(uint32_t PID)
+: Allocator(new PageDirectory, new PageMap, 0) {
+  this->PID = PID;
+  this->page_remaining = 0;
+  this->last_page_pointer = virt_alloc_base;
+  this->stack = new uint8_t[0x8000];
 }
 
 void* Process::allocate(uint32_t size) {
@@ -83,6 +92,3 @@ uint32_t Process::count_allocations(uint32_t address) {
     return 0;
 }
 
-Kernel::Kernel(PageDirectory* page_directory, PageMap* phys, PageMap* virt, uint32_t virt_alloc_base)
-  : Process(0, page_directory, phys, virt, virt_alloc_base)
-{}

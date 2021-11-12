@@ -1,7 +1,7 @@
 #ifndef GLOBAL_H
 #define GLOBAL_H
 
-#include "memory.h"
+class Allocator;
 
 namespace Global {
   extern Allocator* allocator;

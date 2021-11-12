@@ -1,4 +1,5 @@
-#include "global.h"
+#include "memory.h"
+
 namespace Global {
   Allocator* allocator = 0;
 }

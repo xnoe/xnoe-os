@@ -1,10 +1,10 @@
 #ifndef MEMORY_H
 #define MEMORY_H
 
-#include "datatypes/tuple.h"
 #include "paging.h"
 #include "allocate.h"
 #include "screenstuff.h"
+#include "global.h"
 
 void memset(uint8_t* address, uint32_t count, uint8_t value);
 void memcpy(uint8_t* src, uint8_t* dst, uint32_t count);
@@ -20,6 +20,7 @@ private:
 
 public:
   PageMap(uint32_t map);
+  PageMap();
 
   void mark_unavailable(uint32_t address);
   void mark_unavailable(uint32_t address, uint32_t count);
@@ -51,12 +52,14 @@ struct PageTable {
 class PageDirectory {
 private:
   PDE* page_directory;
-  PageTable page_tables[1024];
+  uint8_t __page_tables[sizeof(PageTable) * 1024];
+  PageTable* page_tables;
 
   uint32_t phys_addr;
 
 public:
   PageDirectory(PDE* page_directories, uint32_t phys_addr, uint32_t offset);
+  PageDirectory();
 
   void map(uint32_t phys, uint32_t virt);
   void unmap(uint32_t virt);
@@ -76,8 +79,11 @@ protected:
   uint32_t virt_alloc_base;
 public:
   Allocator(PageDirectory* page_directory, PageMap* phys, PageMap* virt, uint32_t virt_alloc_base);
+  Allocator(PageDirectory* page_directory, PageMap* virt, uint32_t virt_alloc_base);
   virtual void* allocate(uint32_t size);
   virtual void deallocate(uint32_t virt_addr);
+
+  uint32_t virtual_to_physical(uint32_t virt);
 };
 
 #endif

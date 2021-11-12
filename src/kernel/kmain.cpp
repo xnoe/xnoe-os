@@ -13,19 +13,21 @@
 #include "global.h"
 #include "datatypes/hashtable.h"
 #include "terminal.h"
+#include "kernel.h"
 
 int main() {
   init_gdt();
   init_term();
-
+  
   PageDirectory kernel_pd = PageDirectory(0xc0100000, 0x120000, 0xbffe0000);
+
   kernel_pd.select();
   kernel_pd.unmap(0x8000);
 
   PageMap phys_pm(0xc0600000);
   PageMap virt_pm(0xc0620000);
 
-  Kernel kernel = Kernel(&kernel_pd, &phys_pm, &virt_pm, 0xd0000000);
+  Kernel kernel = Kernel(&kernel_pd, &phys_pm, &virt_pm, 0xc0000000);
   Global::allocator = &kernel;
 
   Terminal* current_term;
@@ -33,14 +35,22 @@ int main() {
   TextModeTerminal* term = new TextModeTerminal(0xc0501000);
   current_term = term;
 
+  TextModeTerminal* term2 = new TextModeTerminal(0xc0501000);
+  term2->printf("Balls");
+
   init_idt();
 
+  term->activate();
   term->clear_screen();
 
   term->printf("Hello, World!\n\nWe are running XnoeOS Code in C++ now, Protected Mode has been achieved (as well as Virtual Memory / Paging!!!) and everything is working super nicely!\n\nHow wonderful!\n\nNow I just need to hope my print function works properly too~~\n");
   
   term->printf("KERNEL OK!\n");
-  term->activate();
+  
+  Process* process = new Process(1);
+
+  term->deactivate();
+  term2->activate();
 
   while (1);
 
