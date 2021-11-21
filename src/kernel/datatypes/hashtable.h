@@ -4,6 +4,7 @@
 #include "hash.h"
 #include "linkedlist.h"
 #include "../memory.h"
+#include "maybe.h"
 
 namespace xnoe {
   template <class key, class value>
@@ -17,32 +18,35 @@ namespace xnoe {
     }
 
     void set(key k, value v) {
-      xnoe::linkedlist<xnoe::tuple<key, value>> list = table[xnoe::hash<k>(k) % 4096];
-      xnoe::linkedlistelem<xnoe::tuple<key, value>> current = list.start;
+      xnoe::linkedlist<xnoe::tuple<key, value>> list = table[xnoe::hash<key>(k) % 4096];
+      xnoe::linkedlistelem<xnoe::tuple<key, value>>* current = list.start;
 
       bool exists = false;
 
-      while (current->next) {
-        if (xnoe::get<0>(current->elem) == k) {
-          exists = true;
-          break;
+      if (current) {
+        while (current->next) {
+          if (xnoe::get<0>(current->elem) == k) {
+            exists = true;
+            break;
+          }
         }
       }
       
       if (exists)
-        current = xnoe::tuple<key, value>(k, v);
+        current->elem = xnoe::tuple<key, value>(k, v);
       else
         list.append(xnoe::tuple<key, value>(k, v));
     }
 
-    value* get(key k) {
-      xnoe::linkedlist<xnoe::tuple<key, value>> list = table[xnoe::hash<k>(k) % 4096];
-      xnoe::linkedlistelem<xnoe::tuple<key, value>> current = list.start;
-      while (current->next)
-        if (xnoe::get<0>(current->elem) == k)
-          return &(xnoe::get<1>(current->elem));
+    xnoe::Maybe<value> get(key k) {
+      xnoe::linkedlist<xnoe::tuple<key, value>> list = table[xnoe::hash<key>(k) % 4096];
+      xnoe::linkedlistelem<xnoe::tuple<key, value>>* current = list.start;
+      if (current)
+        while (current->next)
+          if (xnoe::get<0>(current->elem) == k)
+            return xnoe::Maybe<value>(xnoe::get<1>(current->elem));
       
-      return 0;
+      return xnoe::Maybe<value>();
     }
   };
 }

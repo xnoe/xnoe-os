@@ -8,4 +8,9 @@ namespace xnoe {
   uint32_t hash<void*>(void* t) {
     return (uint32_t) t;
   }
+
+  template<>
+  uint32_t hash<uint32_t>(uint32_t t) {
+    return t;
+  }
 }
