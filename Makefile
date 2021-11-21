@@ -13,7 +13,7 @@ run: disk.img
 	qemu-system-x86_64 disk.img
 
 debug: disk.img
-	qemu-system-x86_64 -s -S disk.img & gdb --command=gdbscript
+	qemu-system-x86_64 -s -S -no-reboot -no-shutdown disk.img & gdb --command=gdbscript
 
 disk.img: clean prepare build/boot/boot.bin build/boot_stage2/boot.bin $(DISK_IMG_FILES)
 	dd if=/dev/zero of=disk.img count=43 bs=100k

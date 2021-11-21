@@ -28,7 +28,7 @@ int main() {
   PageMap virt_pm(0xc0620000);
 
   Kernel kernel = Kernel(&kernel_pd, &phys_pm, &virt_pm, 0xc0000000);
-  Global::allocator = &kernel;
+  kernel.init_kernel();
 
   Terminal* current_term;
 
@@ -46,8 +46,8 @@ int main() {
   term->printf("Hello, World!\n\nWe are running XnoeOS Code in C++ now, Protected Mode has been achieved (as well as Virtual Memory / Paging!!!) and everything is working super nicely!\n\nHow wonderful!\n\nNow I just need to hope my print function works properly too~~\n");
   
   term->printf("KERNEL OK!\n");
-  
-  Process* process = new Process(1);
+
+  kernel.createProcess();
 
   term->deactivate();
   term2->activate();

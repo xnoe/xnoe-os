@@ -1,7 +1,8 @@
-#include "memory.h"
+#include "global.h"
 
 namespace Global {
   Allocator* allocator = 0;
+  Kernel* kernel = 0;
 }
 
 void* operator new (uint32_t size) {
