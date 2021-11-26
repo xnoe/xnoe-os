@@ -10,7 +10,7 @@
 #include "global.h"
 
 struct AllocTracker {
-  void* page_base;
+  void* page_base; 
   uint32_t page_size;
   uint32_t alloc_count;
 
@@ -32,8 +32,11 @@ private:
   xnoe::Maybe<xnoe::linkedlistelem<AllocTracker>*> get_alloc_tracker(uint32_t address);
 
 public:
+  uint32_t esp;
+
   Process(uint32_t PID, void* stack, PageDirectory* page_directory, PageMap* phys, PageMap* virt, uint32_t virt_alloc_base);
   Process(uint32_t PID);
+  Process(uint32_t PID, PageDirectory* inherit, uint32_t inheritBase);
 
   void* allocate(uint32_t size) override;
   void deallocate(uint32_t virt_addr) override;

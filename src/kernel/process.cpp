@@ -26,11 +26,80 @@ Process::Process(uint32_t PID)
 : Allocator(new PageDirectory, new PageMap, 0) {
   this->PID = PID;
   this->page_remaining = 0;
-  this->last_page_pointer = virt_alloc_base;
-  this->stack = new uint8_t[0x8000];
+  this->last_page_pointer = 0;
+  this->stack = this->allocate(0x8000);
+}
+
+Process::Process(uint32_t PID, PageDirectory* inherit, uint32_t inheritBase)
+: Allocator(new PageDirectory, new PageMap, 0) {
+  this->PID = PID;
+  this->page_remaining = 0;
+  this->last_page_pointer = 0;
+
+  for (int index = inheritBase >> 22; index < 1024; index++)
+    this->PD->page_directory[index] = inherit->page_directory[index];
+
+  this->stack = this->allocate(0x8000);
+
+  uint32_t pCR3;
+  asm ("mov %%cr3, %0" : "=a" (pCR3) :);
+  this->PD->select();
+  
+  // We also need to initialise ESP and the stack
+  uint32_t* stack32 = ((uint32_t)this->stack + 0x8000);
+  printf("stack32: %x\n", stack32);
+  stack32--;
+  *stack32 = 0x0; // EFLAGS
+  stack32--;
+  *stack32 = 8; // CS 0x08
+  stack32--;
+  *stack32 = 0x14; // Execution will begin from 0x14
+
+  stack32--;
+  *stack32 = ((uint32_t)this->stack + 0x8000); // EBP
+
+  stack32 -= 11;
+
+  stack32--;
+  *stack32 = 0; // EAX
+  stack32--;
+  *stack32 = 0; // ECX
+  stack32--;
+  *stack32 = 0;  // EDX
+  stack32--;
+  *stack32 = 0;  // EBX
+  stack32--;
+  *stack32 = 0; // ESP
+  stack32--;
+  *stack32 = (uint32_t)this->stack + 0x7ffc; // EBP
+  stack32--;
+  *stack32 = 0; // ESI
+  stack32--;
+  *stack32 = 0; // EDI
+
+  this->esp = stack32;
+  printf("this->esp: %x\n", stack32);
+
+  /*((uint8_t*)this->stack)[0] = 0xe9;
+  ((uint8_t*)this->stack)[1] = 0xfb;
+  ((uint8_t*)this->stack)[2] = 0xff;
+  ((uint8_t*)this->stack)[3] = 0xff;
+  ((uint8_t*)this->stack)[4] = 0xff;*/
+
+  ((uint8_t*)this->stack)[0] = 0xcd;
+  ((uint8_t*)this->stack)[1] = 0x80;
+
+  asm ("mov %0, %%cr3" : : "r" (pCR3));
 }
 
 void* Process::allocate(uint32_t size) {
+  bool switched_PD = false;
+  uint32_t pCR3;
+  asm ("mov %%cr3, %0" : "=a" (pCR3) :);
+  if (Global::currentProc != this) {
+    switched_PD = true;
+    this->PD->select();
+  }
   void* ptr;
   // Determine if there's enough space to just allocate what's been requested
   if (size < this->page_remaining) {
@@ -46,7 +115,7 @@ void* Process::allocate(uint32_t size) {
     uint32_t pages = size / 4096;
     uint32_t remainder = 4096 - (size % 4096);
 
-    ptr = Allocator::allocate(size);
+    ptr = this->Allocator::allocate(size);
 
     // Update local values
     this->last_page_pointer = ptr + pages * 4096;
@@ -61,6 +130,9 @@ void* Process::allocate(uint32_t size) {
 
     ptr += elem_size;
   }
+
+  asm ("mov %0, %%cr3" : : "r" (pCR3));
+
   return ptr;
 }
 
@@ -68,7 +140,7 @@ void Process::deallocate(uint32_t virt_addr) {
   xnoe::Maybe<xnoe::linkedlistelem<AllocTracker>*> alloc_tracker = this->get_alloc_tracker(virt_addr);
   if (alloc_tracker.is_ok()) {
     AllocTracker* ac = &alloc_tracker.get()->elem;
-    ac->alloc_count -= 1;
+    ac->alloc_count--;
     if (ac->alloc_count == 0) {
       void* base = ac->page_base;
       uint32_t count = ac->page_size;

@@ -51,13 +51,14 @@ struct PageTable {
 
 class PageDirectory {
 private:
-  PDE* page_directory;
   uint8_t __page_tables[sizeof(PageTable) * 1024];
   PageTable* page_tables;
 
+public:
   uint32_t phys_addr;
 
-public:
+  PDE* page_directory;
+  
   PageDirectory(PDE* page_directories, uint32_t phys_addr, uint32_t offset);
   PageDirectory();
 
@@ -74,10 +75,10 @@ protected:
   static PageMap* phys;
   PageMap* virt;
 
-  PageDirectory* PD;
-
   uint32_t virt_alloc_base;
 public:
+  PageDirectory* PD;
+
   Allocator(PageDirectory* page_directory, PageMap* phys, PageMap* virt, uint32_t virt_alloc_base);
   Allocator(PageDirectory* page_directory, PageMap* virt, uint32_t virt_alloc_base);
   virtual void* allocate(uint32_t size);

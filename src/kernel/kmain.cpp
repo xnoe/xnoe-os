@@ -47,10 +47,15 @@ int main() {
   
   term->printf("KERNEL OK!\n");
 
-  kernel.createProcess();
+  Process* p = kernel.createProcess();
 
-  term->deactivate();
-  term2->activate();
+  //term->deactivate();
+  //term2->activate();
+
+  Global::currentProc = &kernel;
+  asm ("int $0x80");
+
+  term->printf("\n\nIf you are reading this, the XnoeOS kernel successfully switched contexts to another process, and then switched contexts back to the kernel. Therefore we can conclude that context switching works.");
 
   while (1);
 

@@ -5,10 +5,12 @@
 
 class Kernel;
 class Allocator;
+class Process;
 
 namespace Global {
   extern Allocator* allocator;
   extern Kernel* kernel;
+  extern Process* currentProc;
 }
 
 void* operator new (uint32_t size);

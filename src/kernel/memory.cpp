@@ -88,8 +88,10 @@ PageTable::PageTable(uint32_t phys, uint32_t virt) {
 }
 
 PageTable::PageTable(){
-  virt_addr = new PTE[1024];
-  phys_addr = Global::allocator->virtual_to_physical(virt_addr);
+  virt_addr = new PTE[2048];
+  while ((uint32_t)this->virt_addr & 0xfff || (uint32_t)this->virt_addr % 0x4)
+    this->virt_addr++;
+  phys_addr = (Global::allocator->virtual_to_physical(virt_addr)) >> 12;
 
   page_table = (PTE*)virt_addr;
 }
@@ -143,8 +145,11 @@ PageDirectory::PageDirectory(PDE* page_directory, uint32_t phys_addr, uint32_t o
 
 PageDirectory::PageDirectory() {
   this->page_tables = (PageTable*)this->__page_tables;
-  this->page_directory = new PDE[1024];
+  this->page_directory = new PDE[2048];
+  while ((uint32_t)this->page_directory & 0xfff || (uint32_t)this->page_directory % 0x4)
+    this->page_directory++;
   memset((uint8_t*)this->page_tables, sizeof(PageTable) * 1024, 0);
+  memset((uint8_t*)this->page_directory, sizeof(PDE) * 1024, 0);
   this->phys_addr = Global::allocator->virtual_to_physical(this->page_directory);
 }
 
@@ -180,11 +185,11 @@ void PageDirectory::unmap(uint32_t virt) {
 
 uint32_t PageDirectory::virtual_to_physical(uint32_t virt) {
   split_addr* split = (split_addr*)&virt;
-  return page_tables[split->pd_index].get_physical_address(split->pt_index);
+  return page_tables[split->pd_index].get_physical_address(split->pt_index) + split->page_offset;
 }
 
 void PageDirectory::select() {
-  asm volatile("mov %0, %%eax; mov %%eax, %%cr3" : : "m" (phys_addr));
+  asm volatile("mov %0, %%cr3" : : "r" (phys_addr));
 }
 
 PageMap* Allocator::phys;
@@ -205,7 +210,6 @@ Allocator::Allocator(PageDirectory* page_directory, PageMap* virt, uint32_t virt
 }
 
 void* Allocator::allocate(uint32_t size) {
-  asm("mov $0x0, 0x8a000");
   uint32_t count = (size + (4096 - size % 4096)) / 4096;
 
   uint32_t virt_addr = virt->find_next_available_from(this->virt_alloc_base, count);
@@ -214,7 +218,6 @@ void* Allocator::allocate(uint32_t size) {
   for (int i=0; i<count; i++) {
     uint32_t phys_addr = this->phys->find_next_available_from(0);
     this->phys->mark_unavailable(phys_addr);
-    asm("mov $0xdead, 0x8a000");
     this->PD->map(phys_addr, virt_addr + 4096 * i);
   }
 

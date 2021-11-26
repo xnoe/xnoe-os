@@ -167,7 +167,7 @@ void main() {
   mark_unavailble(0xc0502000, 0x1000, vm_bitmap);
   mark_unavailble(0xc0600000, 0x20000, vm_bitmap);
   mark_unavailble(0xc0620000, 0x20000, vm_bitmap);
-  mark_unavailble(0x8a000, 0x6000, vm_bitmap);
+  mark_unavailble(0xc1000000, 0x6000, vm_bitmap);
 
   // Map the bitmap 
   map_many_4k_phys_to_virt(0x100000, 0xc0600000, kernel_page_directory, kernel_page_tables, 32);
@@ -175,7 +175,9 @@ void main() {
   map_many_4k_phys_to_virt(0x522000, 0xc0620000, kernel_page_directory, kernel_page_tables, 32);
 
   map_4k_phys_to_virt(0x8000, 0x8000, kernel_page_directory, kernel_page_tables);
+  // Map the stack
   map_many_4k_phys_to_virt(0x8a000, 0x8a000, kernel_page_directory, kernel_page_tables, 6);
+  map_many_4k_phys_to_virt(0x8a000, 0xc1000000, kernel_page_directory, kernel_page_tables, 6);
 
   load_file("KERNEL  BIN", kernel_location);
 

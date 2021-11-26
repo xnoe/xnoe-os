@@ -3,13 +3,14 @@
 
 #include "types.h"
 #include "screenstuff.h"
+#include "global.h"
+#include "kernel.h"
 
 struct interrupt_frame {
-    uint16_t ip;
+    uint32_t eip;
     uint16_t cs;
-    uint16_t flags;
-    uint16_t sp;
-    uint16_t ss;
+    uint16_t _ignored0;
+    uint32_t eflags;
 };
 extern void load_idt();
 void set_entry(uint8_t interrupt_number, uint16_t code_segment, void* handler, uint8_t type);
