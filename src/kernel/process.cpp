@@ -30,7 +30,7 @@ Process::Process(uint32_t PID)
   this->stack = this->allocate(0x8000);
 }
 
-Process::Process(uint32_t PID, PageDirectory* inherit, uint32_t inheritBase)
+Process::Process(uint32_t PID, PageDirectory* inherit, uint32_t inheritBase, char* filename)
 : Allocator(new PageDirectory, new PageMap, 0) {
   this->PID = PID;
   this->page_remaining = 0;
@@ -45,12 +45,12 @@ Process::Process(uint32_t PID, PageDirectory* inherit, uint32_t inheritBase)
   asm ("mov %%cr3, %0" : "=a" (pCR3) :);
   this->PD->select();
 
-  uint8_t* program_data = this->allocate(file_size("PROGRAM BIN") + 12) + 12;
+  uint8_t* program_data = this->allocate(file_size(filename) + 12) + 12;
 
   // We also need to initialise ESP and the stack
   uint32_t* stack32 = ((uint32_t)this->stack + 0x8000);
   stack32--;
-  *stack32 = 0x0; // EFLAGS
+  *stack32 = 0x200; // EFLAGS
   stack32--;
   *stack32 = 8; // CS 0x08
   stack32--;
@@ -59,7 +59,7 @@ Process::Process(uint32_t PID, PageDirectory* inherit, uint32_t inheritBase)
   stack32--;
   *stack32 = ((uint32_t)this->stack + 0x8000); // EBP
 
-  stack32 -= 11;
+  stack32 -= 21;
 
   stack32--;
   *stack32 = 0; // EAX
@@ -80,7 +80,7 @@ Process::Process(uint32_t PID, PageDirectory* inherit, uint32_t inheritBase)
 
   this->esp = stack32;
 
-  load_file("PROGRAM BIN", program_data);
+  load_file(filename, program_data);
 
   asm ("mov %0, %%cr3" : : "r" (pCR3));
 }

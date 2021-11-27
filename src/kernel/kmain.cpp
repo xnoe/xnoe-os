@@ -44,79 +44,14 @@ int main() {
   
   term->printf("KERNEL OK!\n");
 
-  Process* p = kernel.createProcess();
-
-  //term->deactivate();
-  //term2->activate();
-
   Global::currentProc = &kernel;
-  asm ("int $0x80");
 
-  term->printf("\n\nIf you are reading this, the XnoeOS kernel successfully switched contexts to another process, and then switched contexts back to the kernel. Therefore we can conclude that context switching works.");
-
-  while (1);
+  Process* p1 = kernel.createProcess("WORLD   BIN");
+  Process* p2 = kernel.createProcess("HELLO   BIN");
 
   init_keyboard();
   
   enable_idt();
 
-  uint8_t* filebuffer = new uint8_t[0x3000];
-
-  char* buffer = 0;
-
-  while (1) {
-    if (buffer)
-      delete[] buffer;
-    buffer = new char[128];
-    printf(">>> ");
-    for (int i=0; i<128; i++)
-      buffer[i] = 0;
-    readline(128, buffer);
-
-    char* rest = split_on_first(' ', buffer);
-
-    if (strcmp(buffer, "help", 4)) {
-      printf(
-        "XnoeOS 32 Bit Mode Help.\n"
-        "------------------------\n"
-        " - help\n"
-        " : Shows this message\n"
-        " - clear\n"
-        " : Clears the screen\n"
-        " - echo\n"
-        " : Repeats the text written afterwards\n"
-        " - type\n"
-        " : Prints the contents of a file\n"
-      );
-    } else if (strcmp(buffer, "clear", 5)) {
-      clear_screen();
-      set_curpos(0, 0);
-    } else if (strcmp(buffer, "echo", 4)) {
-      printf("%s\n", rest);
-    } else if (strcmp(buffer, "type", 4)) {
-      char filenamebuffer[12];
-
-      decode_filename(rest, filenamebuffer);
-      if (!file_exists(filenamebuffer)) {
-        printf("File %s not found!\n", filenamebuffer);
-        continue;
-      }
-
-      for (int i=0; i<4096; i++)
-        filebuffer[i] = 0;
-      
-      load_file(filenamebuffer, filebuffer);
-      printf(filebuffer);
-    } else if (strcmp(buffer, "pagefault", 9)) {
-      uint32_t* bad_addr = 0xdeadbeef;
-      uint32_t a = *bad_addr;
-    } else {
-      char filenamebuffer[12];
-      decode_filename(buffer, filenamebuffer);
-      if (!file_exists(filenamebuffer)) {
-        printf("Bad Command or filename!\n");
-        continue;
-      }
-    }
-  }
+  while (1) asm ("hlt");
 }

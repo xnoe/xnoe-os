@@ -9,15 +9,15 @@ Kernel::Kernel(PageDirectory* page_directory, PageMap* phys, PageMap* virt, uint
 
   Global::currentProc = 0;
 
-  this->processes.append(this);
+  //this->processes.append(this);
 }
 
 void Kernel::init_kernel() {
   this->pid_map = new xnoe::hashtable<uint32_t, Process*>();
 }
 
-Process* Kernel::createProcess() {
-  Process* p = new Process(currentPID, this->PD, 0xc0000000);
+Process* Kernel::createProcess(char* filename) {
+  Process* p = new Process(currentPID, this->PD, 0xc0000000, filename);
   this->pid_map->set(currentPID, p);
   currentPID++;
 

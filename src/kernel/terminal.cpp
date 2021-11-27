@@ -3,18 +3,20 @@
 void Terminal::scroll_up() {
   // Scroll the entire buffer up.
   for (int y = 0; y < (height * pages); y++) {
-    uint16_t* cline = y * width;
-    uint16_t* nline = (y+1) * width;
+    uint16_t* cline = buffer + y * width;
+    uint16_t* nline = buffer + (y+1) * width;
     for (int x = 0; x < width; x++) {
       cline[x] = nline[x];
     }
   }
   // Clear the last line
-  uint16_t* last_line = (height * pages - 1) * width;
+  uint16_t* last_line = buffer + (height * pages - 1) * width;
   for (int x = 0; x < width; x++) {
     last_line[x] = 0x0720;
   }
   this->cur_y--;
+
+  this->update();
 }
 
 void Terminal::putchar(uint32_t ptr, uint8_t c, uint8_t edata) {
@@ -61,8 +63,10 @@ void Terminal::printf(const char* string, ...) {
       this->cur_y++;
     }
 
-    if (this->cur_y == this->height)
+    if (this->cur_y == this->height) {
       this->scroll_up();
+      printf("This gets called...");
+    }
 
     if (current == '%') {
       int type = string[index++];

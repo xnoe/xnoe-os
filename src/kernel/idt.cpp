@@ -84,6 +84,8 @@ __attribute__((interrupt)) void context_switch(interrupt_frame* frame) {
     asm volatile ("mov %%esp, %0" : "=a" (cESP) :);
     currentProc->esp = cESP; // Store the current ESP of the current process process.
 
+    outb(0x20, 0x20);
+
     // Select the next processes page directory
     asm volatile ("mov %0, %%cr3" : : "r" (nextProc->PD->phys_addr)); 
     // Restore ESP of the new process.
@@ -92,13 +94,10 @@ __attribute__((interrupt)) void context_switch(interrupt_frame* frame) {
     asm ("popa"); 
     
     // Clear the garbage that was on the stack from previous switch_context call.
-    asm ("add $44, %esp");
+    asm ("add $84, %esp");
 
     // Pop EBP
     asm ("pop %ebp");
-
-    // Re-enable interrupts.
-    asm ("sti");
 
     // Manually perform iret.
     asm ("iret");
@@ -152,10 +151,7 @@ __attribute__((interrupt)) void syscall(interrupt_frame* frame) {
       rval = file_size(esi);
       break;
     case 7: {
-      uint32_t size = file_size(esi);
-      uint8_t* filebuffer = new uint8_t[size];
-      load_file(esi, filebuffer);
-      Global::kernel->createProcess();
+      Global::kernel->createProcess(esi);
       break;
     }
     default:
@@ -174,7 +170,7 @@ void init_idt() {
   for (int i=0; i<256; i++)
     set_entry(i, 0x08, &ignore_interrupt, 0x8E);
   
-  set_entry(0x20, 0x08, &interrupt_20, 0x8E);
+  set_entry(0x20, 0x08, &context_switch, 0x8E);
   set_entry(0xD, 0x08, &gpf, 0x8E);
   set_entry(0xE, 0x08, &page_fault, 0x8E);
   set_entry(0x80, 0x08, &context_switch, 0x8E);

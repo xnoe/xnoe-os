@@ -2,13 +2,16 @@ CFLAGS = -g -std=gnu11 -m32 -mgeneral-regs-only -nostdlib -fno-builtin -fno-exce
 CXXFLAGS = -g -m32 -fno-use-cxa-atexit -mgeneral-regs-only -nostdlib -fno-builtin -fno-rtti -fno-exceptions -fno-leading-underscore -fpermissive -fno-pie -fno-stack-protector -I.
 LDFLAGS = 
 
-DISK_IMG_FILES = build/kernel/kernel.bin build/program/program.bin hello.txt alpha.txt
+DISK_IMG_FILES = build/kernel/kernel.bin build/program/program.bin build/program/hello.bin \
+								 build/program/world.bin hello.txt alpha.txt
 KERNEL_OBJS = build/kernel/entry.o build/kernel/screenstuff.o build/kernel/io.o build/kernel/idt.o build/kernel/keyboard.o \
 							build/kernel/strings.o build/kernel/atapio.o build/kernel/kmain.o build/kernel/paging.o build/kernel/allocate.o \
 							build/kernel/gdt.o build/kernel/memory.o build/kernel/process.o build/kernel/datatypes/hash.o \
 							build/kernel/terminal.o build/kernel/global.o build/kernel/kernel.o
 STAGE2_OBJS = build/c_code_entry.o build/boot_stage2/io.o build/boot_stage2/atapio.o build/boot_stage2/strings.o build/boot_stage2/screenstuff.o build/boot_stage2/stage2.o build/boot_stage2/paging.o
-PROGRAM_OBJS = build/program_code_entry.o build/program/program.o
+PROGRAM_OBJS = build/program_code_entry.o build/program/program.o build/common/common.o
+HELLO_OBJS = build/program_code_entry.o build/program/hello.o build/common/common.o
+WORLD_OBJS = build/program_code_entry.o build/program/world.o build/common/common.o
 
 run: disk.img
 	qemu-system-x86_64 disk.img
@@ -32,6 +35,7 @@ prepare:
 	mkdir -p build/kernel
 	mkdir -p build/kernel/datatypes
 	mkdir -p build/program
+	mkdir -p build/common
 	mountpoint img.d | grep not || umount img.d
 
 clean:
@@ -70,3 +74,9 @@ build/%.o: src/%.asm
 
 build/program/program.bin: src/program/program.ld $(PROGRAM_OBJS)
 	ld $(LDFLAGS) -T $< $(PROGRAM_OBJS)
+
+build/program/hello.bin: src/program/hello.ld $(HELLO_OBJS)
+	ld $(LDFLAGS) -T $< $(HELLO_OBJS)
+
+build/program/world.bin: src/program/world.ld $(WORLD_OBJS)
+	ld $(LDFLAGS) -T $< $(WORLD_OBJS)

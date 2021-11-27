@@ -19,7 +19,7 @@ public:
 
   void init_kernel();
 
-  Process* createProcess();
+  Process* createProcess(char* filename);
 };
 
 #endif
