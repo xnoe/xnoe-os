@@ -73,10 +73,10 @@ __attribute__((interrupt)) void context_switch(interrupt_frame* frame) {
         processes->start->next->prev = processes->start;
         processes->end->prev->next = processes->end;
       }
-
-      // Get the next process.
-      nextProc = processes->start->elem;
     }
+
+    // Get the next process.
+    nextProc = processes->start->elem;
 
     Global::currentProc = nextProc;
 
@@ -94,7 +94,7 @@ __attribute__((interrupt)) void context_switch(interrupt_frame* frame) {
     asm ("popa"); 
     
     // Clear the garbage that was on the stack from previous switch_context call.
-    asm ("add $84, %esp");
+    asm ("mov %ebp, %esp");
 
     // Pop EBP
     asm ("pop %ebp");

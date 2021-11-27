@@ -59,6 +59,8 @@ Process::Process(uint32_t PID, PageDirectory* inherit, uint32_t inheritBase, cha
   stack32--;
   *stack32 = ((uint32_t)this->stack + 0x8000); // EBP
 
+  uint32_t rEBP = stack32;
+
   stack32 -= 21;
 
   stack32--;
@@ -72,7 +74,7 @@ Process::Process(uint32_t PID, PageDirectory* inherit, uint32_t inheritBase, cha
   stack32--;
   *stack32 = 0; // ESP
   stack32--;
-  *stack32 = (uint32_t)this->stack + 0x7ffc; // EBP
+  *stack32 = rEBP; // EBP
   stack32--;
   *stack32 = 0; // ESI
   stack32--;

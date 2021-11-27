@@ -63,10 +63,8 @@ void Terminal::printf(const char* string, ...) {
       this->cur_y++;
     }
 
-    if (this->cur_y == this->height) {
+    if (this->cur_y == this->height)
       this->scroll_up();
-      printf("This gets called...");
-    }
 
     if (current == '%') {
       int type = string[index++];

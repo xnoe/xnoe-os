@@ -20,8 +20,6 @@ struct AllocTracker {
 
 class Process : public Allocator {
 private:
-  uint32_t PID;
-
   uint32_t last_page_pointer;
   uint32_t page_remaining;
 
@@ -33,6 +31,7 @@ private:
   xnoe::Maybe<xnoe::linkedlistelem<AllocTracker>*> get_alloc_tracker(uint32_t address);
 
 public:
+  uint32_t PID;
   uint32_t esp;
 
   Process(uint32_t PID, void* stack, PageDirectory* page_directory, PageMap* phys, PageMap* virt, uint32_t virt_alloc_base);
