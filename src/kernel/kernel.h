@@ -4,10 +4,12 @@
 #include "process.h"
 #include "datatypes/hashtable.h"
 #include "global.h"
+#include "terminal.h"
 
 class Kernel : public Process {
 public:
   uint32_t currentPID;
+  Terminal* terminal;
 
   xnoe::hashtable<uint32_t, Process*>* pid_map; // Map of PIDs -> Process*s
 

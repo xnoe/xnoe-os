@@ -105,6 +105,69 @@ __attribute__((interrupt)) void context_switch(interrupt_frame* frame) {
   }
 }
 
+extern uint8_t current_scancode;
+extern char decoded;
+
+__attribute__((interrupt)) void syscall(interrupt_frame* frame) {
+  // Syscall ABI:
+  // 0: print: Print null terminated string (in esi: char*)
+  // 1: getch: Get current keyboard character ASCII (out eax: char)
+  // 2: getchPS2: Get current keyboard character PS/2 code (out eax: char)
+  // 3: readfile: Load file to location (in esi: char* filename; in edi: uint8_t* buffer)
+  // 4: localalloc: LocalAlloc: Allocate under current process (in esi: size; out eax void* ptr)
+  // 5: localdelete: LocalDelete: Deallocate under current process (in esi: pointer)
+  // 6: filesize: Get file size (in esi: char* filename; out eax size bytes)
+  // 7: fork: create process from filename (in esi: char* filename)
+
+  uint32_t* ebp;
+  asm("mov %%ebp, %0" : "=a" (ebp) :);
+  uint32_t eax = *(ebp-4);
+  uint32_t rval = eax;
+
+  uint32_t syscall_number;
+  uint32_t esi;
+  uint32_t edi;
+  asm("mov %%esi, %0" : "=a" (esi) :);
+  asm("mov %%edi, %0" : "=a" (edi) :);
+  switch (eax) {
+    case 0:
+      Global::kernel->terminal->printf("%s", (char*)esi);
+      break;
+    case 1:
+      rval = decoded;
+      break;
+    case 2:
+      rval = current_scancode;
+      break;
+    case 3:
+      load_file(esi, edi);
+      break;
+    case 4:
+      rval = Global::currentProc->allocate(esi);
+      break;
+    case 5:
+      Global::currentProc->deallocate(esi);
+      break;
+    case 6:
+      rval = file_size(esi);
+      break;
+    case 7: {
+      uint32_t size = file_size(esi);
+      uint8_t* filebuffer = new uint8_t[size];
+      load_file(esi, filebuffer);
+      Global::kernel->createProcess();
+      break;
+    }
+    default:
+      break;
+  }
+
+  asm volatile ("mov %0, %%eax" : : "m" (rval));
+  asm ("mov %ebp, %esp");
+  asm ("pop %ebp");
+  asm ("iret");
+}
+
 void init_idt() {
   idt_desc desc = {.size = 256 * sizeof(GateEntry) - 1, .offset = (uint32_t)idt};
   asm volatile("lidt %0" : : "m" (desc));
@@ -115,6 +178,7 @@ void init_idt() {
   set_entry(0xD, 0x08, &gpf, 0x8E);
   set_entry(0xE, 0x08, &page_fault, 0x8E);
   set_entry(0x80, 0x08, &context_switch, 0x8E);
+  set_entry(0x7f, 0x08, &syscall, 0x8E);
 
   outb(0x20, 0x11);
   outb(0xA0, 0x11);

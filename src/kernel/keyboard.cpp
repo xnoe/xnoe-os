@@ -31,10 +31,26 @@ char key_to_char_shift[128] = {
 };
 
 uint8_t current_scancode = 0;
+char decoded = 0;
+
+bool caps_on = false;
+bool shift_on = false;
 
 __attribute__((interrupt)) void keyboard_interrupt(struct interrupt_frame* frame) {
   current_scancode = inb(0x60);
   outb(0x20, 0x21);
+  if ((current_scancode&0x7f) == 0x2a)
+    shift_on = !(current_scancode&0x80);
+  
+  if (current_scancode == 0x3a)
+    caps_on ^= 1;
+
+  if (shift_on)
+    decoded = key_to_char_shift[current_scancode&0x7f];
+  else if (caps_on)
+    decoded = key_to_char_caps[current_scancode&0x7f];
+  else
+    decoded = key_to_char[current_scancode&0x7f];
 }
 
 void init_keyboard() {
@@ -50,46 +66,4 @@ void init_keyboard() {
   outb(0x64, 0x60);
   outb(0x60, keyboard_status);
   outb(0x60, 0xF4);
-}
-
-bool caps_on = false;
-bool shift_on = false;
-
-void readline(int max, char* buffer) {
-  int index = 0;
-
-
-  uint8_t scancode = 0;
-  while (scancode != 0x1c && index < max) {
-    scancode = current_scancode;
-
-    char decoded = 0;
-
-    if ((scancode&0x7f) == 0x2a)
-      shift_on = !(scancode&0x80);
-    
-    if (scancode == 0x3a)
-      caps_on ^= 1;
-
-    if (scancode == 0x0e && index > 0) {
-      set_curpos_raw(get_curpos()-1);
-      non_moving_put(' ');
-      buffer[--index] = 0;
-    }
-
-    if (shift_on)
-      decoded = key_to_char_shift[scancode&0x7f];
-    else if (caps_on)
-      decoded = key_to_char_caps[scancode&0x7f];
-    else
-      decoded = key_to_char[scancode&0x7f];
-
-    if (decoded && scancode < 0x80) {
-      buffer[index++] = decoded;
-      printf("%c", decoded);
-    }
-
-    while (scancode == current_scancode);
-  }
-  printf("\n");
 }

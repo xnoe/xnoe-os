@@ -8,6 +8,7 @@
 #include "datatypes/maybe.h"
 #include "screenstuff.h"
 #include "global.h"
+#include "atapio.h"
 
 struct AllocTracker {
   void* page_base; 

@@ -44,16 +44,17 @@ Process::Process(uint32_t PID, PageDirectory* inherit, uint32_t inheritBase)
   uint32_t pCR3;
   asm ("mov %%cr3, %0" : "=a" (pCR3) :);
   this->PD->select();
-  
+
+  uint8_t* program_data = this->allocate(file_size("PROGRAM BIN") + 12) + 12;
+
   // We also need to initialise ESP and the stack
   uint32_t* stack32 = ((uint32_t)this->stack + 0x8000);
-  printf("stack32: %x\n", stack32);
   stack32--;
   *stack32 = 0x0; // EFLAGS
   stack32--;
   *stack32 = 8; // CS 0x08
   stack32--;
-  *stack32 = 0x14; // Execution will begin from 0x14
+  *stack32 = (uint32_t)program_data;
 
   stack32--;
   *stack32 = ((uint32_t)this->stack + 0x8000); // EBP
@@ -78,16 +79,8 @@ Process::Process(uint32_t PID, PageDirectory* inherit, uint32_t inheritBase)
   *stack32 = 0; // EDI
 
   this->esp = stack32;
-  printf("this->esp: %x\n", stack32);
 
-  /*((uint8_t*)this->stack)[0] = 0xe9;
-  ((uint8_t*)this->stack)[1] = 0xfb;
-  ((uint8_t*)this->stack)[2] = 0xff;
-  ((uint8_t*)this->stack)[3] = 0xff;
-  ((uint8_t*)this->stack)[4] = 0xff;*/
-
-  ((uint8_t*)this->stack)[0] = 0xcd;
-  ((uint8_t*)this->stack)[1] = 0x80;
+  load_file("PROGRAM BIN", program_data);
 
   asm ("mov %0, %%cr3" : : "r" (pCR3));
 }

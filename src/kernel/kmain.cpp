@@ -29,14 +29,11 @@ int main() {
 
   Kernel kernel = Kernel(&kernel_pd, &phys_pm, &virt_pm, 0xc0000000);
   kernel.init_kernel();
-
-  Terminal* current_term;
+  init_atapio();
 
   TextModeTerminal* term = new TextModeTerminal(0xc0501000);
-  current_term = term;
 
-  TextModeTerminal* term2 = new TextModeTerminal(0xc0501000);
-  term2->printf("Balls");
+  kernel.terminal = term;
 
   init_idt();
 
@@ -62,7 +59,6 @@ int main() {
   init_keyboard();
   
   enable_idt();
-  init_atapio();
 
   uint8_t* filebuffer = new uint8_t[0x3000];
 
