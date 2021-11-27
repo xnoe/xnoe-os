@@ -21,10 +21,10 @@ uint16_t sectorsPerFAT;
 
 
 void init_atapio() {
-  rootDirEntries = (uint8_t*)dumb_alloc(8192);
-  FAT1 = (uint16_t*)dumb_alloc(512 * 34);
+  rootDirEntries = new uint8_t[8192];
+  FAT1 = (uint16_t*)(new uint8_t[512 * 34]);
 
-  uint32_t boot_sector = (uint32_t)dumb_alloc(4096);
+  uint32_t boot_sector = new uint32_t[1024];
   read_sectors(0, 1, (uint8_t*)boot_sector);
 
   countReserved = *((uint16_t*)(boot_sector + 0x0e));
@@ -125,4 +125,15 @@ void load_file(char* filename, uint8_t* destination) {
     if (location == 0xffff)
       loaded = true;
   }
+}
+
+uint32_t file_size(char* filename) {
+  for (int i=0; i<countRDEs; i++) {
+    bool found = strcmp(rootDirEntries+(i*32), filename, 11);
+    if (found) {
+      uint32_t* correctEntry = (uint32_t*)(rootDirEntries+(i*32));
+      return correctEntry[7];
+    }
+  }
+  return 0;
 }
