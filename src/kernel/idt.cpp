@@ -92,6 +92,9 @@ __attribute__((interrupt)) void context_switch(interrupt_frame* frame) {
     asm volatile ("mov %0, %%esp" : : "m" (Global::kernel->processes.start->elem->esp));
     // Restore registers
     asm ("popa"); 
+
+    // Restore the initial eax
+    asm ("mov -0xc(%ebp), %eax");
     
     // Clear the garbage that was on the stack from previous switch_context call.
     asm ("mov %ebp, %esp");
@@ -173,7 +176,6 @@ void init_idt() {
   set_entry(0x20, 0x08, &context_switch, 0x8E);
   set_entry(0xD, 0x08, &gpf, 0x8E);
   set_entry(0xE, 0x08, &page_fault, 0x8E);
-  set_entry(0x80, 0x08, &context_switch, 0x8E);
   set_entry(0x7f, 0x08, &syscall, 0x8E);
 
   outb(0x20, 0x11);
