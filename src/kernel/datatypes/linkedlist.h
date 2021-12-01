@@ -95,6 +95,30 @@ namespace xnoe {
         current = current->next;
       }
     }
+
+    void remove(T elem) {
+      linkedlistelem<T>* current = start;
+      while (current) {
+        if (current->elem == elem) {
+          if (current->prev)
+            current->prev->next = current->next;
+          
+          if (current->next)
+            current->next->prev = current->prev;
+
+          if (current == start)
+            start = current->next;
+
+          if (current == end)
+            end = current->prev;
+          
+          delete current;
+
+          return;
+        }
+        current = current->next;
+      }
+    }
   };
 }
 

@@ -19,6 +19,10 @@ PageMap::PageMap() {
   memset(this->pagemap, 131072, 0xff);
 }
 
+PageMap::~PageMap() {
+  delete pagemap;
+}
+
 void PageMap::set_bit(uint32_t index) {
   uint32_t offset = index % 8;
   uint32_t i = index / 8;
@@ -96,6 +100,10 @@ PageTable::PageTable(){
   page_table = (PTE*)virt_addr;
 }
 
+PageTable::~PageTable() {
+  delete page_table;
+}
+
 void PageTable::map_table(uint32_t index, uint32_t addr) {
   page_table[index] = (PTE){
     .present = 1,
@@ -139,7 +147,7 @@ PageDirectory::PageDirectory(PDE* page_directory, uint32_t phys_addr, uint32_t o
 
   for (int i=0; i<1024; i++) {
     uint32_t table_phys_addr = page_directory[i].getPhysicalPTAddress();
-    page_tables[i] = PageTable(table_phys_addr >> 12, table_phys_addr + offset);
+    new (page_tables + i) PageTable(table_phys_addr >> 12, table_phys_addr + offset);
   }
 }
 
@@ -153,11 +161,18 @@ PageDirectory::PageDirectory() {
   this->phys_addr = Global::allocator->virtual_to_physical(this->page_directory);
 }
 
+PageDirectory::~PageDirectory() {
+  for (int i=0; i<1024; i++)
+    if (page_tables[i].virt_addr)
+      page_tables[i].~PageTable();
+  delete page_directory;
+}
+
 void PageDirectory::map(uint32_t phys, uint32_t virt) {
   split_addr* split = (split_addr*)&virt;
 
   if (!page_tables[split->pd_index].virt_addr)
-    page_tables[split->pd_index] = PageTable();
+    new (page_tables + split->pd_index) PageTable();
 
   page_directory[split->pd_index] = (PDE){
     .present = 1,
@@ -207,6 +222,11 @@ Allocator::Allocator(PageDirectory* page_directory, PageMap* virt, uint32_t virt
   this->virt = virt;
 
   this->virt_alloc_base = virt_alloc_base;
+}
+
+Allocator::~Allocator() {
+  delete virt;
+  delete PD;
 }
 
 void* Allocator::allocate(uint32_t size) {

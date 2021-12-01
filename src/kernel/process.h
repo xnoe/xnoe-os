@@ -38,6 +38,8 @@ public:
   Process(uint32_t PID);
   Process(uint32_t PID, PageDirectory* inherit, uint32_t inheritBase, char* filename);
 
+  ~Process(); // Iterate through allocations and free those; delete stack
+
   void* allocate(uint32_t size) override;
   void deallocate(uint32_t virt_addr) override;
 

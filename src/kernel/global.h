@@ -14,6 +14,7 @@ namespace Global {
 }
 
 void* operator new (uint32_t size);
+void* operator new (uint32_t size, void* ptr);
 void operator delete (void* ptr);
 void operator delete (void* ptr, unsigned int size);
 

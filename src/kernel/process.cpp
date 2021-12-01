@@ -5,7 +5,7 @@ AllocTracker::AllocTracker(void* base, uint32_t size, uint32_t count) : page_bas
 xnoe::Maybe<xnoe::linkedlistelem<AllocTracker>*> Process::get_alloc_tracker(uint32_t address) {
   xnoe::linkedlistelem<AllocTracker>* current = this->allocations.start;
   while (current) {
-    if (current->elem.page_base < address && (current->elem.page_base + 4096 * current->elem.page_size) > address) {
+    if (current->elem.page_base <= address && (current->elem.page_base + 4096 * current->elem.page_size) > address) {
       return xnoe::Maybe<xnoe::linkedlistelem<AllocTracker>*>(current);
     }
     current = current->next;
@@ -85,6 +85,19 @@ Process::Process(uint32_t PID, PageDirectory* inherit, uint32_t inheritBase, cha
   load_file(filename, program_data);
 
   asm ("mov %0, %%cr3" : : "r" (pCR3));
+}
+
+Process::~Process() {
+  xnoe::linkedlistelem<AllocTracker>* next = allocations.start;
+  while (next) {
+    xnoe::linkedlistelem<AllocTracker>* active = next;
+    next = next->next;
+
+    printf("Deleted %x\n", active->elem.page_base);
+
+    this->deallocate(active->elem.page_base+1);
+  }
+  this->deallocate(stack);
 }
 
 void* Process::allocate(uint32_t size) {

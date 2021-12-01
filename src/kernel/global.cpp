@@ -10,6 +10,10 @@ void* operator new (uint32_t size) {
   return Global::allocator->allocate(size);
 }
 
+void* operator new (uint32_t size, void* ptr) {
+  return ptr;
+}
+
 void operator delete (void* ptr) {
   Global::allocator->deallocate((uint32_t)ptr);
 }

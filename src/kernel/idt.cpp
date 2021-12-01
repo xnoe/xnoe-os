@@ -38,6 +38,7 @@ __attribute__((interrupt)) void gpf(interrupt_frame* frame, uint32_t err_code) {
 __attribute__((interrupt)) void context_switch(interrupt_frame* frame) {
   asm ("cli"); // Disable interrupts whilst handling the context switch.
   asm ("pusha"); // Push registers to the stack
+  //asm ("pushf"); // Push flags to the stack
 
   Process* currentProc = Global::currentProc;
   Process* nextProc = 0;
@@ -90,20 +91,14 @@ __attribute__((interrupt)) void context_switch(interrupt_frame* frame) {
     asm volatile ("mov %0, %%cr3" : : "r" (nextProc->PD->phys_addr)); 
     // Restore ESP of the new process.
     asm volatile ("mov %0, %%esp" : : "m" (Global::kernel->processes.start->elem->esp));
-    // Restore registers
-    asm ("popa"); 
 
-    // Restore the initial eax
-    asm ("mov -0xc(%ebp), %eax");
-    
+    //asm ("popf"); // Pop flags
+    asm ("popa"); // Restore registers
+    asm ("mov -0xc(%ebp), %eax"); // Restore the initial eax
     // Clear the garbage that was on the stack from previous switch_context call.
     asm ("mov %ebp, %esp");
-
-    // Pop EBP
-    asm ("pop %ebp");
-
-    // Manually perform iret.
-    asm ("iret");
+    asm ("pop %ebp"); // Pop EBP
+    asm ("iret"); // Manually perform iret.
   }
 }
 

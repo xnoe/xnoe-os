@@ -22,6 +22,8 @@ public:
   PageMap(uint32_t map);
   PageMap();
 
+  ~PageMap();
+
   void mark_unavailable(uint32_t address);
   void mark_unavailable(uint32_t address, uint32_t count);
 
@@ -43,6 +45,8 @@ struct PageTable {
   PageTable(uint32_t phys, uint32_t virt);
   PageTable();
 
+  ~PageTable(); // Delete page_table
+
   void map_table(uint32_t index, uint32_t addr);
   void unmap_table(uint32_t index);
 
@@ -61,6 +65,8 @@ public:
   
   PageDirectory(PDE* page_directories, uint32_t phys_addr, uint32_t offset);
   PageDirectory();
+
+  ~PageDirectory(); // Delete the page tables and page_directory
 
   void map(uint32_t phys, uint32_t virt);
   void unmap(uint32_t virt);
@@ -81,6 +87,9 @@ public:
 
   Allocator(PageDirectory* page_directory, PageMap* phys, PageMap* virt, uint32_t virt_alloc_base);
   Allocator(PageDirectory* page_directory, PageMap* virt, uint32_t virt_alloc_base);
+
+  ~Allocator(); // Delete virt and PD
+
   virtual void* allocate(uint32_t size);
   virtual void deallocate(uint32_t virt_addr);
 

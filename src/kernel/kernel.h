@@ -20,6 +20,7 @@ public:
   void init_kernel();
 
   Process* createProcess(char* filename);
+  void destroyProcess(Process* p);
 };
 
 #endif

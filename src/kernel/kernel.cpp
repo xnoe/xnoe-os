@@ -25,3 +25,10 @@ Process* Kernel::createProcess(char* filename) {
 
   return p;
 }
+
+void Kernel::destroyProcess(Process* p) {
+  this->processes.remove(p);
+  this->pid_map->remove(p->PID, p);
+  delete p;
+  while (1);
+}
