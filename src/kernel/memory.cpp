@@ -104,11 +104,11 @@ PageTable::~PageTable() {
   delete page_table;
 }
 
-void PageTable::map_table(uint32_t index, uint32_t addr) {
+void PageTable::map_table(uint32_t index, uint32_t addr, uint8_t privilege) {
   page_table[index] = (PTE){
     .present = 1,
     .read_write = 1,
-    .privilege = 0,
+    .privilege = privilege,
     .write_through_cache = 0,
     .disable_cache = 0,
     .accessed = 0,
@@ -168,7 +168,7 @@ PageDirectory::~PageDirectory() {
   delete page_directory;
 }
 
-void PageDirectory::map(uint32_t phys, uint32_t virt) {
+void PageDirectory::map(uint32_t phys, uint32_t virt, uint8_t privilege) {
   split_addr* split = (split_addr*)&virt;
 
   if (!page_tables[split->pd_index].virt_addr)
@@ -177,7 +177,7 @@ void PageDirectory::map(uint32_t phys, uint32_t virt) {
   page_directory[split->pd_index] = (PDE){
     .present = 1,
     .read_write = 1,
-    .privilege = 0,
+    .privilege = privilege,
     .write_through_cache = 0,
     .disable_cache = 0,
     .accessed = 0,
@@ -188,7 +188,7 @@ void PageDirectory::map(uint32_t phys, uint32_t virt) {
     .address = page_tables[split->pd_index].phys_addr
   };
 
-  page_tables[split->pd_index].map_table(split->pt_index, phys >> 12);
+  page_tables[split->pd_index].map_table(split->pt_index, phys >> 12, privilege);
   asm volatile ("invlpg (%0)" : : "r" (virt) : "memory");
 }
 
@@ -217,11 +217,12 @@ Allocator::Allocator(PageDirectory* page_directory, PageMap* phys, PageMap* virt
   this->virt_alloc_base = virt_alloc_base;
 }
 
-Allocator::Allocator(PageDirectory* page_directory, PageMap* virt, uint32_t virt_alloc_base) {
+Allocator::Allocator(PageDirectory* page_directory, PageMap* virt, uint32_t virt_alloc_base, uint8_t privilege) {
   this->PD = page_directory;
   this->virt = virt;
 
   this->virt_alloc_base = virt_alloc_base;
+  this->privilege = privilege;
 }
 
 Allocator::~Allocator() {
@@ -238,7 +239,7 @@ void* Allocator::allocate(uint32_t size) {
   for (int i=0; i<count; i++) {
     uint32_t phys_addr = this->phys->find_next_available_from(0);
     this->phys->mark_unavailable(phys_addr);
-    this->PD->map(phys_addr, virt_addr + 4096 * i);
+    this->PD->map(phys_addr, virt_addr + 4096 * i, this->privilege);
   }
 
   return virt_addr;

@@ -42,8 +42,9 @@ struct __attribute__((packed)) tss_struct {
   uint16_t _reserved10;
   uint16_t _reserved11;
   uint16_t iopb;
-  constexpr tss_struct();
 };
+
+extern tss_struct tss;
 
 struct __attribute__((packed)) gdt_entry {
   uint32_t limit_lo : 16;

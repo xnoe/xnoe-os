@@ -80,6 +80,8 @@ void readline(int max, char* buffer) {
 }
 
 int main() {
+  print ("Hello from Ring 3!\n");
+
   char buffer[128];
   while (1) {
     for (int i=0; i<128; i++)

@@ -47,7 +47,7 @@ struct PageTable {
 
   ~PageTable(); // Delete page_table
 
-  void map_table(uint32_t index, uint32_t addr);
+  void map_table(uint32_t index, uint32_t addr, uint8_t privilege=0);
   void unmap_table(uint32_t index);
 
   uint32_t get_physical_address(uint32_t index);
@@ -68,7 +68,7 @@ public:
 
   ~PageDirectory(); // Delete the page tables and page_directory
 
-  void map(uint32_t phys, uint32_t virt);
+  void map(uint32_t phys, uint32_t virt, uint8_t privilege=0);
   void unmap(uint32_t virt);
 
   uint32_t virtual_to_physical(uint32_t virt);
@@ -82,11 +82,12 @@ protected:
   PageMap* virt;
 
   uint32_t virt_alloc_base;
+  uint8_t privilege;
 public:
   PageDirectory* PD;
 
   Allocator(PageDirectory* page_directory, PageMap* phys, PageMap* virt, uint32_t virt_alloc_base);
-  Allocator(PageDirectory* page_directory, PageMap* virt, uint32_t virt_alloc_base);
+  Allocator(PageDirectory* page_directory, PageMap* virt, uint32_t virt_alloc_base, uint8_t privilege);
 
   ~Allocator(); // Delete virt and PD
 

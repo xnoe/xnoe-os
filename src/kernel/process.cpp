@@ -23,7 +23,7 @@ Process::Process(uint32_t PID, void* stack, PageDirectory* page_directory, PageM
 }
 
 Process::Process(uint32_t PID)
-: Allocator(new PageDirectory, new PageMap, 0) {
+: Allocator(new PageDirectory, new PageMap, (uint32_t)0, 3) {
   this->PID = PID;
   this->page_remaining = 0;
   this->last_page_pointer = 0;
@@ -31,7 +31,7 @@ Process::Process(uint32_t PID)
 }
 
 Process::Process(uint32_t PID, PageDirectory* inherit, uint32_t inheritBase, char* filename)
-: Allocator(new PageDirectory, new PageMap, 0) {
+: Allocator(new PageDirectory, new PageMap, (uint32_t)0, 3) {
   this->PID = PID;
   this->page_remaining = 0;
   this->last_page_pointer = 0;
@@ -50,9 +50,13 @@ Process::Process(uint32_t PID, PageDirectory* inherit, uint32_t inheritBase, cha
   // We also need to initialise ESP and the stack
   uint32_t* stack32 = ((uint32_t)this->stack + 0x8000);
   stack32--;
+  *stack32 = 0x23;
+  stack32--;
+  *stack32 = ((uint32_t)this->stack + 0x8000);
+  stack32--;
   *stack32 = 0x200; // EFLAGS
   stack32--;
-  *stack32 = 8; // CS 0x08
+  *stack32 = 27; // CS 0x08
   stack32--;
   *stack32 = (uint32_t)program_data;
 

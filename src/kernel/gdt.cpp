@@ -1,47 +1,45 @@
 #include "gdt.h"
 
-constexpr tss_struct::tss_struct() :
-  link(0),
-  _reserved0(0),
-  esp0(0),
-  ss0(0),
-  _reserved1(0),
-  esp1(0),
-  ss1(0),
-  _reserved2(0),
-  esp2(0),
-  ss2(0),
-  _reserved3(0),
-  cr3(0),
-  eip(0),
-  eflags(0),
-  eax(0),
-  ebx(0),
-  ecx(0),
-  edx(0),
-  esp(0),
-  ebp(0),
-  esi(0),
-  edi(0),
-  es(0),
-  _reserved4(0),
-  cs(0),
-  _reserved5(0),
-  ss(0),
-  _reserved6(0),
-  ds(0),
-  _reserved7(0),
-  fs(0),
-  _reserved8(0),
-  gs(0),
-  _reserved9(0),
-  ldtr(0),
-  _reserved10(0),
-  _reserved11(0),
-  iopb(0)
-{}
-
-tss_struct tss = tss_struct();
+tss_struct tss = (tss_struct) {
+  .link = 0,
+  ._reserved0 = 0,
+  .esp0 = 0xc1006000,
+  .ss0 = 0x10,
+  ._reserved1 = 0,
+  .esp1 = 0,
+  .ss1 = 0,
+  ._reserved2 = 0,
+  .esp2 = 0,
+  .ss2 = 0,
+  ._reserved3 = 0,
+  .cr3 = 0,
+  .eip = 0,
+  .eflags = 0,
+  .eax = 0,
+  .ebx = 0,
+  .ecx = 0,
+  .edx = 0,
+  .esp = 0,
+  .ebp = 0,
+  .esi = 0,
+  .edi = 0,
+  .es = 0,
+  ._reserved4 = 0,
+  .cs = 0,
+  ._reserved5 = 0,
+  .ss = 0,
+  ._reserved6 = 0,
+  .ds = 0,
+  ._reserved7 = 0,
+  .fs = 0,
+  ._reserved8 = 0,
+  .gs = 0,
+  ._reserved9 = 0,
+  .ldtr = 0,
+  ._reserved10 = 0,
+  ._reserved11 = 0,
+  .iopb = 104
+};
 
 constexpr gdt_entry::gdt_entry(uint32_t limit, uint32_t base, bool rw, bool exec, bool system, uint8_t ring) :
   limit_lo(limit & 0xffff),
@@ -81,9 +79,13 @@ constexpr gdt_entry::gdt_entry() :
 
 gdt_entry gdt[] = {
   gdt_entry(), // Null Segment
-  gdt_entry(0xfffff, 0, 1, 1, 1, 0), // Code Segment
-  gdt_entry(0xfffff, 0, 1, 0, 1, 0), // Data Segment
-  gdt_entry(sizeof(tss), &tss, 0, 1, 0, 0) // Task State Segment 1
+  gdt_entry(0xfffff, 0, 1, 1, 1, 0), // Kernel Code Segment
+  gdt_entry(0xfffff, 0, 1, 0, 1, 0), // Kernel Data Segment
+
+  gdt_entry(0xfffff, 0, 1, 1, 1, 3), // User Code Segment
+  gdt_entry(0xfffff, 0, 1, 0, 1, 3), // User Data Segment
+
+  gdt_entry() // Empty Task State Segment
 };
 
 gdt_descr descr = (gdt_descr){
@@ -92,9 +94,12 @@ gdt_descr descr = (gdt_descr){
 };
 
 void init_gdt() {
+  gdt[5] = gdt_entry(sizeof(tss), &tss, 0, 1, 0, 0); // Initialise the TSS.
+  gdt[5].accessed = 1;
   asm volatile("lgdt %0;"
                "mov $0x10, %%eax;"
                "mov %%eax, %%ss;"
-               "mov $0x10, %%eax;"
-               "mov %%eax, %%ds" : : "m" (descr));
+               "mov %%eax, %%ds;"
+               "mov $0x28, %%ax;"
+               "ltr %%ax" : : "m" (descr));
 }

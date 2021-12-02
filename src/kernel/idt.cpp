@@ -2,14 +2,17 @@
 
 GateEntry idt[256];
 
-void set_entry(uint8_t interrupt_number, uint16_t code_segment, void* handler, uint8_t type) {
+void set_entry(uint8_t interrupt_number, uint16_t code_segment, void* handler, uint8_t type, uint8_t privilege) {
   uint32_t handler_addr = (uint32_t)handler;
   uint16_t* handler_halves = (uint16_t*)&handler_addr;
-  idt[interrupt_number] = (GateEntry){
+  idt[interrupt_number] = (GateEntry) {
     .offset_low = handler_halves[0],
     .selector = code_segment,
     .zero = 0,
     .type = type,
+    .zero1 = 0,
+    .privilege = privilege,
+    .present = 1,
     .offset_high = handler_halves[1]
   };
 }
@@ -31,7 +34,7 @@ __attribute__((interrupt)) void ignore_interrupt(interrupt_frame* frame) {
 }
 
 __attribute__((interrupt)) void gpf(interrupt_frame* frame, uint32_t err_code) {
-  printf("General Protection Fault %d\n", err_code);
+  printf("General Protection Fault %x\n", err_code);
   while (1) asm("hlt");
 }
 
@@ -168,10 +171,10 @@ void init_idt() {
   for (int i=0; i<256; i++)
     set_entry(i, 0x08, &ignore_interrupt, 0x8E);
   
-  set_entry(0x20, 0x08, &context_switch, 0x8E);
-  set_entry(0xD, 0x08, &gpf, 0x8E);
-  set_entry(0xE, 0x08, &page_fault, 0x8E);
-  set_entry(0x7f, 0x08, &syscall, 0x8E);
+  set_entry(0x20, 0x08, &context_switch, 0xE);
+  set_entry(0xD, 0x08, &gpf, 0xE);
+  set_entry(0xE, 0x08, &page_fault, 0xE);
+  set_entry(0x7f, 0x08, &syscall, 0xE, 3);
 
   outb(0x20, 0x11);
   outb(0xA0, 0x11);

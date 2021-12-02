@@ -36,10 +36,8 @@ namespace xnoe {
       
       if (exists)
         current->elem = xnoe::tuple<key, value>(k, v);
-      else {
-        printf("Appended.\n");
+      else
         list->append(xnoe::tuple<key, value>(k, v));
-      }
     }
 
     xnoe::Maybe<value> get(key k) {
