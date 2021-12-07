@@ -145,10 +145,8 @@ void main() {
   // Now we want to map some stuff.
   // But first, we should load the kernel somewhere
 
-
-
-  uint8_t* kernel_location = 0x542000; // Just load it at 0x522000 for now
-  mark_unavailble(kernel_location, 32768, bitmap); // Just treat the kernel as not growing beyong 32k for now.
+  uint8_t* kernel_location = 0x542000; // Just load it at 0x524000 for now
+  mark_unavailble(kernel_location, 32768, bitmap); // Just treat the kernel as not growing beyond 32k for now.
 
   map_many_4k_phys_to_virt(kernel_location, 0xc0000000, kernel_page_directory, kernel_page_tables, 8); // Map 8 pages from 0x522000 to 0xc0000000;
   map_4k_phys_to_virt((uint32_t)kernel_page_directory, 0xc0100000, kernel_page_directory, kernel_page_tables); // Map the page directory to 0xc0100000
@@ -157,6 +155,7 @@ void main() {
   map_4k_phys_to_virt(0x521000, 0xc0502000, kernel_page_directory, kernel_page_tables); // Map the PTE** data, we'll need to convert the pointers to point at kernel space at some point.
 
   uint8_t* vm_bitmap = 0x522000;
+  mark_unavailble(vm_bitmap, 0x20000, bitmap);
 
   memset(vm_bitmap, 0x20000, 0xff);
 
@@ -178,6 +177,7 @@ void main() {
   // Map the stack
   map_many_4k_phys_to_virt(0x8a000, 0x8a000, kernel_page_directory, kernel_page_tables, 6);
   map_many_4k_phys_to_virt(0x8a000, 0xc1000000, kernel_page_directory, kernel_page_tables, 6);
+  mark_unavailble(0x8a000, 0x6000, bitmap);
 
   load_file("KERNEL  BIN", kernel_location);
 
