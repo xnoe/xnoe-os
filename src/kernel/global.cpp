@@ -4,6 +4,7 @@ namespace Global {
   Allocator* allocator = 0;
   Kernel* kernel = 0;
   Process* currentProc = 0;
+  tss_struct* tss = 0;
 }
 
 void* operator new (uint32_t size) {

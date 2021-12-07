@@ -5,6 +5,7 @@
 #include "screenstuff.h"
 #include "global.h"
 #include "kernel.h"
+#include "gdt.h"
 
 struct interrupt_frame {
     uint32_t eip;

@@ -28,6 +28,7 @@ Process::Process(uint32_t PID)
   this->page_remaining = 0;
   this->last_page_pointer = 0;
   this->stack = this->allocate(0x8000);
+  this->kernelStackPtr = (new uint8_t[0x1000]) + 0x1000;
 }
 
 Process::Process(uint32_t PID, PageDirectory* inherit, uint32_t inheritBase, char* filename)
@@ -40,6 +41,8 @@ Process::Process(uint32_t PID, PageDirectory* inherit, uint32_t inheritBase, cha
     this->PD->page_directory[index] = inherit->page_directory[index];
 
   this->stack = this->allocate(0x8000);
+  this->kernelStackPtr = (new uint8_t[0x1000]) + 0xffc;
+  this->kernelStackPtrDefault = this->kernelStackPtr;
 
   uint32_t pCR3;
   asm ("mov %%cr3, %0" : "=a" (pCR3) :);
@@ -48,17 +51,17 @@ Process::Process(uint32_t PID, PageDirectory* inherit, uint32_t inheritBase, cha
   uint8_t* program_data = this->allocate(file_size(filename) + 12) + 12;
 
   // We also need to initialise ESP and the stack
-  uint32_t* stack32 = ((uint32_t)this->stack + 0x8000);
+  uint32_t* stack32 = ((uint32_t)this->kernelStackPtr);
   stack32--;
-  *stack32 = 0x23;
+  *stack32 = 0x23; // SS
   stack32--;
-  *stack32 = ((uint32_t)this->stack + 0x8000);
+  *stack32 = ((uint32_t)this->stack + 0x8000); // ESP
   stack32--;
   *stack32 = 0x200; // EFLAGS
   stack32--;
   *stack32 = 27; // CS 0x08
   stack32--;
-  *stack32 = (uint32_t)program_data;
+  *stack32 = (uint32_t)program_data; // EIP
 
   stack32--;
   *stack32 = ((uint32_t)this->stack + 0x8000); // EBP
@@ -84,7 +87,7 @@ Process::Process(uint32_t PID, PageDirectory* inherit, uint32_t inheritBase, cha
   stack32--;
   *stack32 = 0; // EDI
 
-  this->esp = stack32;
+  this->kernelStackPtr = stack32;
 
   load_file(filename, program_data);
 
@@ -102,6 +105,7 @@ Process::~Process() {
     this->deallocate(active->elem.page_base+1);
   }
   this->deallocate(stack);
+  delete kernelStackPtr;
 }
 
 void* Process::allocate(uint32_t size) {

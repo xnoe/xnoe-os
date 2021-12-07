@@ -6,11 +6,13 @@
 class Kernel;
 class Allocator;
 class Process;
+struct tss_struct;
 
 namespace Global {
   extern Allocator* allocator;
   extern Kernel* kernel;
   extern Process* currentProc;
+  extern tss_struct* tss;
 }
 
 void* operator new (uint32_t size);

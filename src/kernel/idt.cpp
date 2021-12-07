@@ -39,12 +39,29 @@ __attribute__((interrupt)) void gpf(interrupt_frame* frame, uint32_t err_code) {
 }
 
 __attribute__((interrupt)) void context_switch(interrupt_frame* frame) {
+  // When any interrupt occurs (including context_switch), SS:ESP is set to
+  // the values of SS0:ESP0 in Global::tss
+  //
+  // This means that processes need to track a kernel stack pointer
+  // Which is the location of their indivudual kernel stacks.
+  //
+  // Context switch needs to do two things.
+  // #1 update currentProc's kernel stack pointer to be the correct value after
+  // data has been pushed on to the stack
+  // 
+  // #2 load the kernelStackPtr in to esp before popping data and falling through 
+  // to iret
+
   asm ("cli"); // Disable interrupts whilst handling the context switch.
   asm ("pusha"); // Push registers to the stack
   //asm ("pushf"); // Push flags to the stack
 
   Process* currentProc = Global::currentProc;
   Process* nextProc = 0;
+
+  // Write current esp to currentProc->kernelStackPtr
+  asm ("mov %%esp, %0" : "=a" (currentProc->kernelStackPtr):);
+
   if (currentProc) {
     xnoe::linkedlist<Process*>* processes = &Global::kernel->processes;
     
@@ -84,16 +101,22 @@ __attribute__((interrupt)) void context_switch(interrupt_frame* frame) {
 
     Global::currentProc = nextProc;
 
-    uint32_t cESP;
-    asm volatile ("mov %%esp, %0" : "=a" (cESP) :);
-    currentProc->esp = cESP; // Store the current ESP of the current process process.
+    //uint32_t cESP;
+    //asm volatile ("mov %%esp, %0" : "=a" (cESP) :);
+    //currentProc->esp = cESP; // Store the current ESP of the current process process.
 
     outb(0x20, 0x20);
 
     // Select the next processes page directory
     asm volatile ("mov %0, %%cr3" : : "r" (nextProc->PD->phys_addr)); 
-    // Restore ESP of the new process.
-    asm volatile ("mov %0, %%esp" : : "m" (Global::kernel->processes.start->elem->esp));
+    // Restore kernelStackPtr of the new process.
+    asm volatile ("mov %0, %%esp" : : "m" (Global::kernel->processes.start->elem->kernelStackPtr));
+
+    // At this point interrupts are disabled till iret so we can safely set
+    // Global::tss->esp0
+    // to the new Process's kernelStackPtrDefault
+
+    Global::tss->esp0 = Global::kernel->processes.start->elem->kernelStackPtrDefault;
 
     //asm ("popf"); // Pop flags
     asm ("popa"); // Restore registers
@@ -101,6 +124,7 @@ __attribute__((interrupt)) void context_switch(interrupt_frame* frame) {
     // Clear the garbage that was on the stack from previous switch_context call.
     asm ("mov %ebp, %esp");
     asm ("pop %ebp"); // Pop EBP
+
     asm ("iret"); // Manually perform iret.
   }
 }

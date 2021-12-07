@@ -2,6 +2,7 @@
 #define GDT_H
 
 #include "types.h"
+#include "global.h"
 
 struct __attribute__((packed)) tss_struct {
   uint16_t link;

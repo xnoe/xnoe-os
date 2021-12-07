@@ -102,4 +102,5 @@ void init_gdt() {
                "mov %%eax, %%ds;"
                "mov $0x28, %%ax;"
                "ltr %%ax" : : "m" (descr));
+  Global::tss = &tss;
 }
