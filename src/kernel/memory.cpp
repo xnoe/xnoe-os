@@ -73,15 +73,17 @@ uint32_t PageMap::find_next_available_from(uint32_t address) {
 }
 
 uint32_t PageMap::find_next_available_from(uint32_t address, uint32_t count) {
-  while (1) {
-    while (!available(address)) address += 4096;
+restart:
+  while (!available(address)) address += 4096;
 
-    for (int a=address, i=0; i<count; i++, a+=4096)
-      if (!available(a))
-        continue;
-    
-    return address;
+  for (int a=address, i=0; i<count; i++, a+=4096) {
+    if (!available(a)) {
+      address = a;
+      goto restart;
+    }
   }
+
+  return address;
 }
 
 PageTable::PageTable(uint32_t phys, uint32_t virt) {

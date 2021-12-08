@@ -68,8 +68,7 @@ __attribute__((interrupt)) void context_switch(interrupt_frame* frame) {
     // This cursed bit of code first determines if the processes list is longer than 1 and if it is
     // - Determines if it has 2 or more elements
     //   - If it has two, swap the first and last, update prev and next of each to be null or the other item
-    //   - If it has more than two, swap the first and last, then swap their next and prevs, and set the 
-    //     other value to null
+    //   - If it has more than two, add the start to the end then set start to the second element
     if (processes->start->next != 0) {
       if (processes->end->prev == processes->start) {
         xnoe::linkedlistelem<Process*>* tmp = processes->start;
@@ -81,18 +80,13 @@ __attribute__((interrupt)) void context_switch(interrupt_frame* frame) {
         processes->end->prev = processes->start;
         processes->start->next = processes->end;
       } else {
-        xnoe::linkedlistelem<Process*>* tmp = processes->start;
-        processes->start = processes->end;
-        processes->end = tmp;
-
-        processes->start->next = processes->end->next;
-        processes->end->prev = processes->start->prev;
-
+        processes->end->next = processes->start;
+        processes->start = processes->start->next;
         processes->start->prev = 0;
+        xnoe::linkedlistelem<Process*>* tmp = processes->end;
+        processes->end = processes->end->next;
         processes->end->next = 0;
-
-        processes->start->next->prev = processes->start;
-        processes->end->prev->next = processes->end;
+        processes->end->prev = tmp;
       }
     }
 
@@ -142,6 +136,7 @@ __attribute__((interrupt)) void syscall(interrupt_frame* frame) {
   // 5: localdelete: LocalDelete: Deallocate under current process (in esi: pointer)
   // 6: filesize: Get file size (in esi: char* filename; out eax size bytes)
   // 7: fork: create process from filename (in esi: char* filename)
+  // 8: getPID: returns the current process's PID (out eax: uint32_t)
 
   uint32_t* ebp;
   asm("mov %%ebp, %0" : "=a" (ebp) :);
@@ -179,6 +174,9 @@ __attribute__((interrupt)) void syscall(interrupt_frame* frame) {
       Global::kernel->createProcess(esi);
       break;
     }
+    case 8:
+      rval = Global::currentProc->PID;
+      break;
     default:
       break;
   }
