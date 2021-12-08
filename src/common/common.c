@@ -28,6 +28,10 @@ uint32_t filesize(char* filename) {
   asm volatile ("mov $6, %%eax; mov %0, %%esi; int $0x7f" : : "m" (filename) : "esi");
 }
 
+uint32_t getPID() {
+  asm volatile ("mov $8, %%eax; int $0x7f" : : :);
+}
+
 int int_to_decimal(unsigned int number, char* string_buffer) {
   for (int i=0; i<11; i++)
     string_buffer[i] = 0;

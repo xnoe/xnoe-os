@@ -11,6 +11,8 @@ void* localalloc(uint32_t size);
 void localdelete(void* ptr);
 uint32_t filesize(char* filename);
 
+uint32_t getPID();
+
 int int_to_decimal(unsigned int number, char* string_buffer);
 int int_to_hex(unsigned int number, char* string_buffer);
 
