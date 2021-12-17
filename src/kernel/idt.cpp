@@ -2,7 +2,11 @@
 
 GateEntry idt[256];
 
-void set_entry(uint8_t interrupt_number, uint16_t code_segment, void* handler, uint8_t type, uint8_t privilege) {
+void(*gates[256])(frame_struct*);
+
+extern void(*isrs[256])(void);
+
+void set_entry(uint8_t interrupt_number, uint16_t code_segment, void(*handler)(), uint8_t type, uint8_t privilege) {
   uint32_t handler_addr = (uint32_t)handler;
   uint16_t* handler_halves = (uint16_t*)&handler_addr;
   idt[interrupt_number] = (GateEntry) {
@@ -17,28 +21,41 @@ void set_entry(uint8_t interrupt_number, uint16_t code_segment, void* handler, u
   };
 }
 
-__attribute__((interrupt)) void interrupt_20(interrupt_frame* frame) {
-//  printf("Interrupt 20 received!!\n");
-  outb(0x20, 0x20);
-}
-
-__attribute__((interrupt)) void page_fault(interrupt_frame* frame, uint32_t err_code) {
+void page_fault(frame_struct* frame, uint32_t err_code) {
   uint32_t problem_address;
   asm("mov %%cr2, %0" : "=a" (problem_address) :);
-  printf("(EIP %x): Page Fault at %x\n", frame->eip, problem_address);
-  while (1) asm("hlt");
+  Global::kernel->terminal->printf("(EIP %x): Page Fault at %x\n", frame->eip, problem_address);
+  if (frame->cs & 3 == 0) {
+    Global::kernel->terminal->printf("[FATAL] Kernel Page Fault!!!\n");
+    while (1) asm("hlt");
+  } else {
+    // Print an error message.
+    Global::kernel->terminal->printf("PID %d Terminated due to page fault!\n", Global::currentProc->PID);
+    // We are currently in the kernel stack for the current process so we need to load the main kernel stack in to esp.
+    //Global::kernel->loadPrimaryStack();
+
+    asm volatile ("mov %0, %%esp" ::"m"(Global::kernel->stack));
+
+    // We can now safely delete the current process
+    Global::kernel->destroyProcess(Global::currentProc);
+
+    // We want to load the kernel's page directory too.
+    //Global::kernel->PD->select();
+
+    //Global::currentProcValid = false;
+    asm ("int $0x20"); // Call context switch.
+    while (1) asm("hlt");
+  }
 }
 
-__attribute__((interrupt)) void ignore_interrupt(interrupt_frame* frame) {
-  outb(0x20, 0x20);
-}
+void ignore_interrupt(frame_struct* frame) {}
 
-__attribute__((interrupt)) void gpf(interrupt_frame* frame, uint32_t err_code) {
+void gpf(frame_struct* frame, uint32_t err_code) {
   printf("General Protection Fault %x\n", err_code);
   while (1) asm("hlt");
 }
 
-__attribute__((interrupt)) void context_switch(interrupt_frame* frame) {
+void context_switch(frame_struct* frame) {
   // When any interrupt occurs (including context_switch), SS:ESP is set to
   // the values of SS0:ESP0 in Global::tss
   //
@@ -53,53 +70,59 @@ __attribute__((interrupt)) void context_switch(interrupt_frame* frame) {
   // to iret
 
   asm ("cli"); // Disable interrupts whilst handling the context switch.
-  asm ("pusha"); // Push registers to the stack
-  //asm ("pushf"); // Push flags to the stack
 
-  Process* currentProc = Global::currentProc;
+  // Restore eax
+  asm ("mov %0, %%eax"::"r"(frame->eax));
+
+  Process* currentProc = 0;
   Process* nextProc = 0;
 
-  // Write current esp to currentProc->kernelStackPtr
-  asm ("mov %%esp, %0" : "=a" (currentProc->kernelStackPtr):);
+  if (Global::currentProcValid) {
+    currentProc = Global::currentProc;
+    // Write current esp to currentProc->kernelStackPtr
+    asm ("mov %%esp, %0" : "=a" (currentProc->kernelStackPtr):);
+  }
 
-  if (currentProc) {
+  if (currentProc || !Global::currentProcValid) {
     xnoe::linkedlist<Process*>* processes = &Global::kernel->processes;
     
     // This cursed bit of code first determines if the processes list is longer than 1 and if it is
     // - Determines if it has 2 or more elements
     //   - If it has two, swap the first and last, update prev and next of each to be null or the other item
     //   - If it has more than two, add the start to the end then set start to the second element
-    if (processes->start->next != 0) {
-      if (processes->end->prev == processes->start) {
-        xnoe::linkedlistelem<Process*>* tmp = processes->start;
-        processes->start = processes->end;
-        processes->end = tmp;
+    if (processes->start) {
+      if (processes->start->next != 0) {
+        if (processes->end->prev == processes->start) {
+          xnoe::linkedlistelem<Process*>* tmp = processes->start;
+          processes->start = processes->end;
+          processes->end = tmp;
 
-        processes->start->prev = 0;
-        processes->end->next = 0;
-        processes->end->prev = processes->start;
-        processes->start->next = processes->end;
-      } else {
-        processes->end->next = processes->start;
-        processes->start = processes->start->next;
-        processes->start->prev = 0;
-        xnoe::linkedlistelem<Process*>* tmp = processes->end;
-        processes->end = processes->end->next;
-        processes->end->next = 0;
-        processes->end->prev = tmp;
+          processes->start->prev = 0;
+          processes->end->next = 0;
+          processes->end->prev = processes->start;
+          processes->start->next = processes->end;
+        } else {
+          processes->end->next = processes->start;
+          processes->start = processes->start->next;
+          processes->start->prev = 0;
+          xnoe::linkedlistelem<Process*>* tmp = processes->end;
+          processes->end = processes->end->next;
+          processes->end->next = 0;
+          processes->end->prev = tmp;
+        }
       }
     }
 
     // Get the next process.
-    nextProc = processes->start->elem;
+    if (processes->start)
+      nextProc = processes->start->elem;
+
+    if (nextProc == 0) {
+      Global::kernel->terminal->printf("[FATAL] No more processes! Halting!\n");
+      while (1) asm ("hlt");
+    }
 
     Global::currentProc = nextProc;
-
-    //uint32_t cESP;
-    //asm volatile ("mov %%esp, %0" : "=a" (cESP) :);
-    //currentProc->esp = cESP; // Store the current ESP of the current process process.
-
-    outb(0x20, 0x20);
 
     // Select the next processes page directory
     asm volatile ("mov %0, %%cr3" : : "r" (nextProc->PD->phys_addr)); 
@@ -107,26 +130,26 @@ __attribute__((interrupt)) void context_switch(interrupt_frame* frame) {
     asm volatile ("mov %0, %%esp" : : "m" (Global::kernel->processes.start->elem->kernelStackPtr));
 
     // At this point interrupts are disabled till iret so we can safely set
-    // Global::tss->esp0
-    // to the new Process's kernelStackPtrDefault
+    // Global::tss->esp0 to the new Process's kernelStackPtrDefault
 
     Global::tss->esp0 = Global::kernel->processes.start->elem->kernelStackPtrDefault;
 
-    //asm ("popf"); // Pop flags
-    asm ("popa"); // Restore registers
-    asm ("mov -0xc(%ebp), %eax"); // Restore the initial eax
-    // Clear the garbage that was on the stack from previous switch_context call.
-    asm ("mov %ebp, %esp");
-    asm ("pop %ebp"); // Pop EBP
+    // Set the current proc to valid 
+    Global::currentProcValid = true;
 
-    asm ("iret"); // Manually perform iret.
+    uint32_t* espVal;
+    asm ("mov %%esp, %0":"=a"(espVal):);
+    if (*espVal == 0) {
+      asm("add $4, %esp");
+      asm("ret");
+    }
   }
 }
 
 extern uint8_t current_scancode;
 extern char decoded;
 
-__attribute__((interrupt)) void syscall(interrupt_frame* frame) {
+void syscall(frame_struct* frame) {
   // Syscall ABI:
   // 0: print: Print null terminated string (in esi: char*)
   // 1: getch: Get current keyboard character ASCII (out eax: char)
@@ -138,17 +161,11 @@ __attribute__((interrupt)) void syscall(interrupt_frame* frame) {
   // 7: fork: create process from filename (in esi: char* filename)
   // 8: getPID: returns the current process's PID (out eax: uint32_t)
 
-  uint32_t* ebp;
-  asm("mov %%ebp, %0" : "=a" (ebp) :);
-  uint32_t eax = *(ebp-4);
-  uint32_t rval = eax;
+  uint32_t rval = frame->eax;
 
-  uint32_t syscall_number;
-  uint32_t esi;
-  uint32_t edi;
-  asm("mov %%esi, %0" : "=a" (esi) :);
-  asm("mov %%edi, %0" : "=a" (edi) :);
-  switch (eax) {
+  uint32_t esi = frame->esi;
+  uint32_t edi = frame->edi;
+  switch (frame->eax) {
     case 0:
       Global::kernel->terminal->printf("%s", (char*)esi);
       break;
@@ -181,22 +198,25 @@ __attribute__((interrupt)) void syscall(interrupt_frame* frame) {
       break;
   }
 
-  asm volatile ("mov %0, %%eax" : : "m" (rval));
-  asm ("mov %ebp, %esp");
-  asm ("pop %ebp");
-  asm ("iret");
+  frame->eax = rval;
 }
 
 void init_idt() {
   idt_desc desc = {.size = 256 * sizeof(GateEntry) - 1, .offset = (uint32_t)idt};
   asm volatile("lidt %0" : : "m" (desc));
+
   for (int i=0; i<256; i++)
-    set_entry(i, 0x08, &ignore_interrupt, 0x8E);
+    set_entry(i, 0x08, isrs[i], 0xE);
+
+  for (int i=0; i<256; i++)
+    gates[i] = &ignore_interrupt;
   
-  set_entry(0x20, 0x08, &context_switch, 0xE);
-  set_entry(0xD, 0x08, &gpf, 0xE);
-  set_entry(0xE, 0x08, &page_fault, 0xE);
-  set_entry(0x7f, 0x08, &syscall, 0xE, 3);
+  gates[0x20] = &context_switch;
+  gates[0xd] = &gpf;
+  gates[0xe] = &page_fault;
+  gates[0x7f] = &syscall;
+
+  idt[0x7f].privilege = 3;
 
   outb(0x20, 0x11);
   outb(0xA0, 0x11);

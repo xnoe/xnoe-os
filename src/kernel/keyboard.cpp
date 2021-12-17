@@ -36,7 +36,7 @@ char decoded = 0;
 bool caps_on = false;
 bool shift_on = false;
 
-__attribute__((interrupt)) void keyboard_interrupt(struct interrupt_frame* frame) {
+void keyboard_interrupt(frame_struct* frame) {
   current_scancode = inb(0x60);
   outb(0x20, 0x21);
   if ((current_scancode&0x7f) == 0x2a)
@@ -54,7 +54,8 @@ __attribute__((interrupt)) void keyboard_interrupt(struct interrupt_frame* frame
 }
 
 void init_keyboard() {
-  set_entry(0x21, 0x08, &keyboard_interrupt, 0x8E);
+  //set_entry(0x21, 0x08, &keyboard_interrupt, 0x8E);
+  gates[0x21] = &keyboard_interrupt;
 
   while (inb(0x64) & 1) {
     inb(0x60);

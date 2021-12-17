@@ -27,7 +27,7 @@ int main() {
   PageMap phys_pm(0xc0600000);
   PageMap virt_pm(0xc0620000);
 
-  Kernel kernel = Kernel(&kernel_pd, &phys_pm, &virt_pm, 0xc0000000);
+  Kernel kernel = Kernel(&kernel_pd, &phys_pm, &virt_pm, 0xc0000000, 0xc1006000);
   kernel.init_kernel();
   init_atapio();
 
@@ -47,6 +47,7 @@ int main() {
   Global::currentProc = &kernel;
 
   Process* p1 = kernel.createProcess("WORLD   BIN");
+  kernel.createProcess("HELLO   BIN");
 
   init_keyboard();
   

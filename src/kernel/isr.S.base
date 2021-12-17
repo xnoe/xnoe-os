@@ -1,0 +1,52 @@
+[BITS 32]
+
+global isrs
+
+global catchall_return
+
+catchall: ; At this point the gate number has been pushed to the stack
+  pushad ; Pushed 32 bytes
+  mov eax, [esp+32]
+  mov ebx, gates
+  mov eax, [ebx+4*eax]
+  push esp
+  call eax
+
+catchall_return:
+  add esp, 4
+
+  push 0x20
+  push 0x20
+  call outb
+  add esp, 8
+
+  popad
+  mov esp, ebp
+  pop ebp
+  iret
+
+extern gates ; (void(*)(frame_struct))*
+extern outb 
+
+; struct frame_struct __attribute__((packed)) {
+; popad
+;   uint32_t edi;
+;   uint32_t esi;
+;   uint32_t ebp;
+;   uint32_t esp;
+;   uint32_t ebx;
+;   uint32_t edx;
+;   uint32_t ecx;
+;   uint32_t eax;
+;
+; interrupt
+;   uint32_t eip;
+;   uint32_t cs;
+;   uint32_t eflags;
+;   uint32_t esp;
+;   uint32_t ss;
+;  
+; if it's an error
+;   uint32_t err_code;
+; }
+

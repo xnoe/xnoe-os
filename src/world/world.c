@@ -2,7 +2,7 @@
 #include <stdbool.h>
 
 char key_to_char[128] = {
-  0, 0, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', 0, 0, 
+  0, 0, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', '\b', 0, 
   'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']', 0,
   0, 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\'', '`', 0, '\\',
   'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/', 0, '*', 0, ' ', 0, 0,
@@ -12,7 +12,7 @@ char key_to_char[128] = {
 };
 
 char key_to_char_caps[128] = {
-  0, 0, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', 0, 0, 
+  0, 0, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', '\b', 0, 
   'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '[', ']', 0,
   0, 'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', ';', '\'', '`', 0, '\\',
   'Z', 'X', 'C', 'V', 'B', 'N', 'M', ',', '.', '/', 0, '*', 0, ' ', 0, 0,
@@ -22,7 +22,7 @@ char key_to_char_caps[128] = {
 };
 
 char key_to_char_shift[128] = {
-  0, 0, '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '_', '+', 0, 0, 
+  0, 0, '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '_', '+', '\b', 0, 
   'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '{', '}', 0,
   0, 'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', ':', '"', '~', 0, '|',
   'Z', 'X', 'C', 'V', 'B', 'N', 'M', ',', '.', '/', 0, '*', 0, ' ', 0, 0,
@@ -54,12 +54,6 @@ void readline(int max, char* buffer) {
     if (scancode == 0x3a)
       caps_on ^= 1;
 
-    /*if (scancode == 0x0e && index > 0) {
-      set_curpos_raw(get_curpos()-1);
-      non_moving_put(' ');
-      buffer[--index] = 0;
-    }*/
-
     if (shift_on)
       decoded = key_to_char_shift[scancode&0x7f];
     else if (caps_on)
@@ -67,7 +61,12 @@ void readline(int max, char* buffer) {
     else
       decoded = key_to_char[scancode&0x7f];
 
-    if (decoded && scancode < 0x80) {
+    if (scancode == 0x0e) {
+      if (index > 0) {
+        buffer[--index] = 0;
+        print("\b");
+      }
+    } else if (decoded && scancode < 0x80) {
       buffer[index++] = decoded;
       char_print[0] = decoded;
       print(char_print);

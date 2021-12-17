@@ -5,6 +5,7 @@ namespace Global {
   Kernel* kernel = 0;
   Process* currentProc = 0;
   tss_struct* tss = 0;
+  bool currentProcValid = true;
 }
 
 void* operator new (uint32_t size) {

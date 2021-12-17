@@ -1,5 +1,7 @@
 #include "process.h"
 
+extern void(*catchall_return)();
+
 AllocTracker::AllocTracker(void* base, uint32_t size, uint32_t count) : page_base(base), page_size(size), alloc_count(count) {}
 
 xnoe::Maybe<xnoe::linkedlistelem<AllocTracker>*> Process::get_alloc_tracker(uint32_t address) {
@@ -68,8 +70,6 @@ Process::Process(uint32_t PID, PageDirectory* inherit, uint32_t inheritBase, cha
 
   uint32_t rEBP = stack32;
 
-  stack32 -= 21;
-
   stack32--;
   *stack32 = 0; // EAX
   stack32--;
@@ -86,6 +86,13 @@ Process::Process(uint32_t PID, PageDirectory* inherit, uint32_t inheritBase, cha
   *stack32 = 0; // ESI
   stack32--;
   *stack32 = 0; // EDI
+
+  stack32--;
+
+  stack32--;
+  *stack32 = &catchall_return; // cachall_return
+
+  stack32--;
 
   this->kernelStackPtr = stack32;
 

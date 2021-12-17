@@ -1,6 +1,6 @@
 #include "kernel.h"
 
-Kernel::Kernel(PageDirectory* page_directory, PageMap* phys, PageMap* virt, uint32_t virt_alloc_base)
+Kernel::Kernel(PageDirectory* page_directory, PageMap* phys, PageMap* virt, uint32_t virt_alloc_base, uint32_t stack)
   : Process(0, 0x8a000, page_directory, phys, virt, virt_alloc_base)
 {
   this->currentPID = 1;
@@ -8,6 +8,8 @@ Kernel::Kernel(PageDirectory* page_directory, PageMap* phys, PageMap* virt, uint
   Global::kernel = this;
 
   Global::currentProc = 0;
+
+  this->stack = stack;
 
   //this->processes.append(this);
 }
@@ -30,5 +32,8 @@ void Kernel::destroyProcess(Process* p) {
   this->processes.remove(p);
   this->pid_map->remove(p->PID, p);
   delete p;
-  while (1);
 }
+
+//void Kernel::loadPrimaryStack() {
+//  asm volatile("mov %0, %%esp"::"m"(this->stack - 64));
+//}

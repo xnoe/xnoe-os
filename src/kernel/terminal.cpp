@@ -58,6 +58,20 @@ void Terminal::printf(const char* string, ...) {
       this->cur_y++;
     }
 
+    if (current == '\b') {
+      if (this->cur_x > 0) {
+        this->cur_x--;
+      } else {
+        this->cur_y--;
+        this->cur_x = this->width-1;
+      }
+
+      int mem_pos = this->cur_y * this->width + this->cur_x;
+      
+      this->putchar(mem_pos, ' ');
+      continue;
+    }
+
     if (this->cur_x == this->width) {
       this->cur_x = 0;
       this->cur_y++;

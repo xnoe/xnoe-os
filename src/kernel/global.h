@@ -13,6 +13,7 @@ namespace Global {
   extern Kernel* kernel;
   extern Process* currentProc;
   extern tss_struct* tss;
+  extern bool currentProcValid;
 }
 
 void* operator new (uint32_t size);
