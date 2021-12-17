@@ -8,7 +8,7 @@ SECTIONS {
 
   .text : {
     build/c_code_entry.o(.text)
-    build/boot_stage2/stage2.o(.text)
+    build/boot_stage2/main.o(.text)
     build/boot_stage2/*(.text)
   }
 }
