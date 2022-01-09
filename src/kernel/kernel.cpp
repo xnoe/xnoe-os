@@ -16,6 +16,7 @@ Kernel::Kernel(PageDirectory* page_directory, PageMap* phys, PageMap* virt, uint
 
 void Kernel::init_kernel() {
   this->pid_map = new xnoe::hashtable<uint32_t, Process*>();
+  this->globalISRStack = (new uint8_t[0x8000]) + 0x8000;
 }
 
 Process* Kernel::createProcess(char* filename) {

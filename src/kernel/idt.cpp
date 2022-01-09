@@ -21,37 +21,36 @@ void set_entry(uint8_t interrupt_number, uint16_t code_segment, void(*handler)()
   };
 }
 
-void page_fault(frame_struct* frame, uint32_t err_code) {
+void page_fault(frame_struct* frame) {
+  // Clear interrupts, we don't want to perform a context switch during a page fault.
+  asm ("cli");
   uint32_t problem_address;
   asm("mov %%cr2, %0" : "=a" (problem_address) :);
-  Global::kernel->terminal->printf("(EIP %x): Page Fault at %x\n", frame->eip, problem_address);
-  if (frame->cs & 3 == 0) {
+  Global::kernel->terminal->printf("(CS %x EIP %x): Page Fault at %x Error Code: %x Gate: %d\n", frame->cs, frame->eip, problem_address, frame->errcode, frame->gate);
+  if (!(frame->cs & 3)) {
     Global::kernel->terminal->printf("[FATAL] Kernel Page Fault!!!\n");
     while (1) asm("hlt");
   } else {
     // Print an error message.
     Global::kernel->terminal->printf("PID %d Terminated due to page fault!\n", Global::currentProc->PID);
-    // We are currently in the kernel stack for the current process so we need to load the main kernel stack in to esp.
-    //Global::kernel->loadPrimaryStack();
-
-    asm volatile ("mov %0, %%esp" ::"m"(Global::kernel->stack));
+    asm volatile ("mov %0, %%esp" ::"m"(Global::kernel->globalISRStack));
+    Global::kernel->PD->select();
 
     // We can now safely delete the current process
     Global::kernel->destroyProcess(Global::currentProc);
+    
+    Global::currentProcValid = false;
 
-    // We want to load the kernel's page directory too.
-    //Global::kernel->PD->select();
-
-    //Global::currentProcValid = false;
-    asm ("int $0x20"); // Call context switch.
-    while (1) asm("hlt");
+    // Go in to an infinite loop
+    asm ("sti");
+    while (1) asm ("hlt");
   }
 }
 
 void ignore_interrupt(frame_struct* frame) {}
 
-void gpf(frame_struct* frame, uint32_t err_code) {
-  printf("General Protection Fault %x\n", err_code);
+void gpf(frame_struct* frame) {
+  printf("(EIP %x) General Protection Fault %x\n", frame->eip, frame->errcode);
   while (1) asm("hlt");
 }
 

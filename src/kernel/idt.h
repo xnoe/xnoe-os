@@ -16,6 +16,11 @@ struct __attribute__((packed)) frame_struct {
   uint32_t edx;
   uint32_t ecx;
   uint32_t eax;
+
+  uint32_t gate;
+  uint32_t __ignored2;
+  uint32_t errcode;
+
   uint32_t eip;
   uint16_t cs;
   uint16_t _ignored0;

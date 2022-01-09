@@ -10,6 +10,7 @@ class Kernel : public Process {
 public:
   uint32_t currentPID;
   uint32_t stack;
+  uint32_t globalISRStack;
   Terminal* terminal;
 
   xnoe::hashtable<uint32_t, Process*>* pid_map; // Map of PIDs -> Process*s

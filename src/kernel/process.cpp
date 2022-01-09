@@ -186,4 +186,3 @@ uint32_t Process::count_allocations(uint32_t address) {
   else
     return 0;
 }
-
