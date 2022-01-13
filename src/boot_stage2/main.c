@@ -146,9 +146,9 @@ void main() {
   // But first, we should load the kernel somewhere
 
   uint8_t* kernel_location = 0x542000; // Just load it at 0x524000 for now
-  mark_unavailble(kernel_location, 32768, bitmap); // Just treat the kernel as not growing beyond 32k for now.
+  mark_unavailble(kernel_location, 0x10000, bitmap); // Just treat the kernel as not growing beyond 32k for now.
 
-  map_many_4k_phys_to_virt(kernel_location, 0xc0000000, kernel_page_directory, kernel_page_tables, 8); // Map 8 pages from 0x522000 to 0xc0000000;
+  map_many_4k_phys_to_virt(kernel_location, 0xc0000000, kernel_page_directory, kernel_page_tables, 0x10); // Map 8 pages from 0x522000 to 0xc0000000;
   map_4k_phys_to_virt((uint32_t)kernel_page_directory, 0xc0100000, kernel_page_directory, kernel_page_tables); // Map the page directory to 0xc0100000
   map_many_4k_phys_to_virt(0x121000, 0xc0101000, kernel_page_directory, kernel_page_tables, 1024); // Map 1024 pages from 0x121000 to 0xc0101000
   map_4k_phys_to_virt(0xb8000, 0xc0501000, kernel_page_directory, kernel_page_tables); // Map 0xb8000 (video) to 0xc0501000
@@ -159,7 +159,7 @@ void main() {
 
   memset(vm_bitmap, 0x20000, 0xff);
 
-  mark_unavailble(0xc0000000, 0x8000, vm_bitmap);
+  mark_unavailble(0xc0000000, 0x10000, vm_bitmap);
   mark_unavailble(0xc0100000, 0x1000, vm_bitmap);
   mark_unavailble(0xc0101000, 0x400000, vm_bitmap);
   mark_unavailble(0xc0501000, 0x1000, vm_bitmap);
@@ -175,9 +175,9 @@ void main() {
 
   map_4k_phys_to_virt(0x8000, 0x8000, kernel_page_directory, kernel_page_tables);
   // Map the stack
-  map_many_4k_phys_to_virt(0x8a000, 0x8a000, kernel_page_directory, kernel_page_tables, 6);
-  map_many_4k_phys_to_virt(0x8a000, 0xc1000000, kernel_page_directory, kernel_page_tables, 6);
-  mark_unavailble(0x8a000, 0x6000, bitmap);
+  map_many_4k_phys_to_virt(0x8a000, 0x8a000, kernel_page_directory, kernel_page_tables, 16);
+  map_many_4k_phys_to_virt(0x8a000, 0xc1000000, kernel_page_directory, kernel_page_tables, 16);
+  mark_unavailble(0x8a000, 0x10000, bitmap);
 
   load_file("KERNEL  BIN", kernel_location);
 

@@ -29,6 +29,12 @@ Process* Kernel::createProcess(char* filename) {
   return p;
 }
 
+Process* Kernel::createProcess(char* filename, ReadWriter* stdout) {
+  Process* p = this->createProcess(filename);
+  p->stdout = stdout;
+  return p;
+}
+
 void Kernel::destroyProcess(Process* p) {
   this->processes.remove(p);
   this->pid_map->remove(p->PID, p);

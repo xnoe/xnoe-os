@@ -35,6 +35,11 @@ Process::Process(uint32_t PID)
 
 Process::Process(uint32_t PID, PageDirectory* inherit, uint32_t inheritBase, char* filename)
 : Allocator(new PageDirectory, new PageMap, (uint32_t)0, 3) {
+  this->stdout = 0;
+  this->stdin = 0;
+
+  this->firstRun = true;
+
   this->PID = PID;
   this->page_remaining = 0;
   this->last_page_pointer = 0;

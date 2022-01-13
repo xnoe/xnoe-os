@@ -31,7 +31,8 @@ void Terminal::update(){}
 void Terminal::update_cur(){}
 void Terminal::putchar_internal(uint32_t ptr, uint8_t c, uint8_t edata) {}
 
-Terminal::Terminal(uint32_t width, uint32_t height, uint32_t pages) {
+Terminal::Terminal(uint32_t width, uint32_t height, uint32_t pages)
+: ReadWriter(0) {
   this->width = width;
   this->height = height;
   this->pages = pages;
@@ -123,6 +124,18 @@ void Terminal::printf(const char* string, ...) {
 
   va_end(ptr);
 }
+
+int Terminal::write(uint32_t count, uint8_t* buffer) {
+  char* buf = new char[count+1];
+  for (int i=0;i<count;i++) {
+    buf[i] = buffer[i];
+  }
+  buf[count] = 0;
+  printf(buf);
+  delete buf;
+}
+
+int Terminal::read(uint32_t count, uint8_t* buffer) {}
 
 void Terminal::clear_screen() {
   for (int i=0; i < width * height * pages; i++) {

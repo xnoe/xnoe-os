@@ -14,14 +14,17 @@ public:
   Terminal* terminal;
 
   xnoe::hashtable<uint32_t, Process*>* pid_map; // Map of PIDs -> Process*s
+  xnoe::hashtable<void*, ReadWriter*>* FH; // Map of File Handlers -> Read Writer
 
   xnoe::linkedlist<Process*> processes;
+  xnoe::linkedlist<Process*> KBListeners;
 
   Kernel(PageDirectory* page_directory, PageMap* phys, PageMap* virt, uint32_t virt_alloc_base, uint32_t stack);
 
   void init_kernel();
 
   Process* createProcess(char* filename);
+  Process* createProcess(char* filename, ReadWriter* stdout);
   void destroyProcess(Process* p);
   //void loadPrimaryStack();
 };

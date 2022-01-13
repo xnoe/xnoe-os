@@ -22,6 +22,16 @@ namespace xnoe {
     xnoe::linkedlistelem<T>* start;
     xnoe::linkedlistelem<T>* end;
 
+    bool has(T t) {
+      xnoe::linkedlistelem<T>* current = this->start;
+      while (start) {
+        if (start->elem == t)
+          return true;
+      }
+
+      return false;
+    }
+
     void append(T t) {
       xnoe::linkedlistelem<T>* llelem = new xnoe::linkedlistelem<T>(t);
       append(llelem);

@@ -6,6 +6,7 @@
 #include "global.h"
 #include "kernel.h"
 #include "gdt.h"
+#include "stdio/circularrwbuffer.h"
 
 struct __attribute__((packed)) frame_struct {
   uint32_t edi;

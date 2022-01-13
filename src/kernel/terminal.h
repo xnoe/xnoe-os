@@ -8,7 +8,9 @@
 #include "strings.h"
 #include "io.h"
 
-class Terminal {
+#include "stdio/readwriter.h"
+
+class Terminal: public ReadWriter {
 private:
   virtual void update();
   virtual void update_cur();
@@ -35,6 +37,9 @@ public:
   Terminal(uint32_t width, uint32_t height, uint32_t pages);
 
   void printf(const char* string, ...);
+
+  int write(uint32_t count, uint8_t* buffer) override;
+  int read(uint32_t count, uint8_t* buffer) override;
 
   void clear_screen();
   void set_curpos(int x, int y);

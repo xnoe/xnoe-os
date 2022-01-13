@@ -10,6 +10,8 @@
 #include "global.h"
 #include "atapio.h"
 
+#include "stdio/readwriter.h"
+
 struct AllocTracker {
   void* page_base; 
   uint32_t page_size;
@@ -36,6 +38,11 @@ public:
 
   void* kernelStackPtr;
   void* kernelStackPtrDefault;
+
+  ReadWriter* stdout;
+  ReadWriter* stdin;
+
+  bool firstRun;
 
   Process(uint32_t PID, void* stack, PageDirectory* page_directory, PageMap* phys, PageMap* virt, uint32_t virt_alloc_base);
   Process(uint32_t PID);

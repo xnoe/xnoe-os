@@ -46,8 +46,8 @@ int main() {
 
   Global::currentProc = &kernel;
 
-  Process* p1 = kernel.createProcess("WORLD   BIN");
-  kernel.createProcess("HELLO   BIN");
+  Process* p1 = kernel.createProcess("WORLD   BIN", term);
+  //kernel.createProcess("HELLO   BIN");
 
   init_keyboard();
   

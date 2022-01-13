@@ -1,19 +1,11 @@
 #include "common.h"
 
 void print(char* string) {
-  asm volatile ("mov $0, %%eax; mov %0, %%esi; int $0x7f" : : "m" (string) : "eax", "esi");
-}
-
-char getch() {
-  asm volatile ("mov $1, %%eax; int $0x7f" : : :);
-}
-
-uint8_t getchPS2() {
-  asm volatile ("mov $2, %%eax; int $0x7f" : : :);
-}
-
-void readfile(char* filename, uint8_t* buffer) {
-  asm volatile ("mov $3, %%eax; mov %0, %%esi; mov %1, %%edi; int $0x7f" : : "m" (filename), "m" (buffer) : "eax", "esi", "edi");
+  char* c = string;
+  int i=0;
+  while (*(c++))
+    i++;
+  write(i, 0, (uint8_t*)string);
 }
 
 void* localalloc(uint32_t size) {
@@ -24,12 +16,20 @@ void localdelete(void* ptr) {
   asm volatile ("mov $5, %%eax; mov %0, %%esi; int $0x7f" : : "m" (ptr) : "esi");
 }
 
-uint32_t filesize(char* filename) {
-  asm volatile ("mov $6, %%eax; mov %0, %%esi; int $0x7f" : : "m" (filename) : "esi");
-}
-
 uint32_t getPID() {
   asm volatile ("mov $8, %%eax; int $0x7f" : : :);
+}
+
+int read(uint32_t count, void* filehanlder, uint8_t* buffer) {
+  asm volatile ("mov $10, %%eax; mov %0, %%ebx; mov %1, %%esi; mov %2, %%edi; int $0x7f" : : "m" (count), "m" (filehanlder), "m" (buffer): "ebx", "esi", "edi");
+}
+
+int write(uint32_t count, void* filehanlder, uint8_t* buffer) {
+  asm volatile ("mov $11, %%eax; mov %0, %%ebx; mov %1, %%esi; mov %2, %%edi; int $0x7f" : : "m" (count), "m" (filehanlder), "m" (buffer): "ebx", "esi", "edi");
+}
+
+void bindToKeyboard() {
+  asm volatile ("mov $12, %%eax; int $0x7f" : : :);
 }
 
 int int_to_decimal(unsigned int number, char* string_buffer) {

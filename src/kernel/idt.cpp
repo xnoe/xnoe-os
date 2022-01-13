@@ -136,63 +136,112 @@ void context_switch(frame_struct* frame) {
     // Set the current proc to valid 
     Global::currentProcValid = true;
 
-    uint32_t* espVal;
-    asm ("mov %%esp, %0":"=a"(espVal):);
-    if (*espVal == 0) {
+    if (Global::currentProc->firstRun) {
+      Global::currentProc->firstRun = false;
       asm("add $4, %esp");
       asm("ret");
     }
   }
 }
 
-extern uint8_t current_scancode;
-extern char decoded;
-
 void syscall(frame_struct* frame) {
   // Syscall ABI:
-  // 0: print: Print null terminated string (in esi: char*)
-  // 1: getch: Get current keyboard character ASCII (out eax: char)
-  // 2: getchPS2: Get current keyboard character PS/2 code (out eax: char)
-  // 3: readfile: Load file to location (in esi: char* filename; in edi: uint8_t* buffer)
+  // 0: X
+  // 1: X
+  // 2: X
+  // 3: X
   // 4: localalloc: LocalAlloc: Allocate under current process (in esi: size; out eax void* ptr)
   // 5: localdelete: LocalDelete: Deallocate under current process (in esi: pointer)
-  // 6: filesize: Get file size (in esi: char* filename; out eax size bytes)
-  // 7: fork: create process from filename (in esi: char* filename)
+  // 6: X
+  // 7: X
   // 8: getPID: returns the current process's PID (out eax: uint32_t)
+  // 9: getFileHandler :: char* path esi -> void* eax // Returns a file handlers for a specific file
+  // 10: read :: uint32_t count ebx -> void* filehandler esi -> uint8_t* outputbuffer edi -> int read // Reads from a file handler in to a buffer, returns successful read
+  // 11: write :: uint32_t count ebx -> void* filehandler esi -> uint8_t* inputbuffer edi -> int written // Reads from a buffer in to a file, returns successful written
+  // 12: bindToKeyboard :: void -> void // Binds the current process's stdout to the keyboard.
+
+  // File handlers:
+  // 0: Stdout
+  // 1: Stdin
+  // 2..7: Reserved
+  // _: General use
 
   uint32_t rval = frame->eax;
 
   uint32_t esi = frame->esi;
   uint32_t edi = frame->edi;
+
+  Process* currentProc = Global::currentProc;
+
   switch (frame->eax) {
     case 0:
-      Global::kernel->terminal->printf("%s", (char*)esi);
       break;
     case 1:
-      rval = decoded;
       break;
     case 2:
-      rval = current_scancode;
       break;
     case 3:
-      load_file(esi, edi);
       break;
     case 4:
-      rval = Global::currentProc->allocate(esi);
+      rval = currentProc->allocate(esi);
       break;
     case 5:
-      Global::currentProc->deallocate(esi);
+      currentProc->deallocate(esi);
       break;
     case 6:
-      rval = file_size(esi);
       break;
-    case 7: {
-      Global::kernel->createProcess(esi);
+    case 7:
+      break;
+    case 8:
+      rval = currentProc->PID;
+      break;
+    
+    case 9:
+      break;
+
+    case 10: {
+      if (esi == 1) {
+        ReadWriter* stdin = currentProc->stdin;
+        if (!stdin)
+          break;
+        
+        rval = stdin->read(frame->ebx, edi);
+      } else {
+        xnoe::Maybe<ReadWriter*> fh = Global::kernel->FH->get(esi);
+        if (!fh.is_ok())
+          break;
+        
+        ReadWriter* rw = fh.get();
+        rval = rw->read(frame->ebx, edi);
+      }
       break;
     }
-    case 8:
-      rval = Global::currentProc->PID;
+
+    case 11: {
+      if (esi == 0) {
+        ReadWriter* stdout = currentProc->stdout;
+        if (!stdout)
+          break;
+        
+        rval = stdout->write(frame->ebx, edi);
+      } else {
+        xnoe::Maybe<ReadWriter*> fh = Global::kernel->FH->get(esi);
+        if (!fh.is_ok())
+          break;
+        
+        ReadWriter* rw = fh.get();
+        rval = rw->write(frame->ebx, edi);
+      }
       break;
+    }
+
+    case 12:
+      if (currentProc->stdin)
+        break;
+      
+      currentProc->stdin = new CircularRWBuffer(currentProc->PID, 0);
+      Global::kernel->KBListeners.append(currentProc);
+
     default:
       break;
   }

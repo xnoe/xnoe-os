@@ -2,6 +2,7 @@
 
 _start:
   call main
-  int 0x80
+_loop:
+  jmp _loop
 
 extern main
