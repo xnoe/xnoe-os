@@ -46,6 +46,23 @@ Terminal::Terminal(uint32_t width, uint32_t height, uint32_t pages)
   this->active = false;
 }
 
+int strToInt(char* str) {
+  int r=0;
+  while (*str >= 0x30 && *str <= 0x39) {
+    r *= 10;
+    r += *(str++) - 0x30;
+  }
+  return r;
+}
+
+int clamp(int a, int b, int c) {
+  if (a < b)
+    return b;
+  if (a > c)
+    return c;
+  return a;
+}
+
 void Terminal::printf(const char* string, ...) {
   va_list ptr;
   va_start(ptr, string);
@@ -59,10 +76,50 @@ void Terminal::printf(const char* string, ...) {
       this->cur_y++;
     }
 
+    if (current == 0x1b && string[index] == '[') {
+      index++;
+      char* parameterStart = (string+index);
+      while (string[index] >= 0x30 && string[index] <= 0x3F)
+        index++;
+      char* parameterEnd = (string+index);
+
+      char* intermediateStart = (string+index);
+      while (string[index] >= 0x20 && string[index] <= 0x2F)
+        index++;
+
+      char final = *(string+(index++));
+
+      switch (final) {
+        case 'A':
+          this->cur_y -= clamp(strToInt(parameterStart), 0, this->cur_y);
+          break;
+        case 'B':
+          this->cur_y += clamp(strToInt(parameterStart), 0, this->height - this->cur_y);
+          break;
+        case 'C':
+          this->cur_x += clamp(strToInt(parameterStart), 0, this->width - this->cur_x);
+          break;
+        case 'D':
+          this->cur_x -= clamp(strToInt(parameterStart), 0, this->cur_x);
+          break;
+        case 'H': {
+          char* s=parameterStart;
+          while (*s != ';' && s < parameterEnd)
+            s++;
+          s++;
+          this->cur_y = clamp(strToInt(parameterStart), 1, this->height) - 1;
+          this->cur_x = clamp(strToInt(s), 1, this->width) - 1;
+          break;
+        }
+      }
+
+      continue;
+    }
+
     if (current == '\b') {
       if (this->cur_x > 0) {
         this->cur_x--;
-      } else {
+      } else if (this->cur_y > 0) {
         this->cur_y--;
         this->cur_x = this->width-1;
       }
@@ -125,14 +182,94 @@ void Terminal::printf(const char* string, ...) {
   va_end(ptr);
 }
 
-int Terminal::write(uint32_t count, uint8_t* buffer) {
-  char* buf = new char[count+1];
+int Terminal::write(uint32_t count, uint8_t* string) {
+  /*char* buf = new char[count+1];
   for (int i=0;i<count;i++) {
     buf[i] = buffer[i];
   }
-  buf[count] = 0;
+  buf[count] = 0x00;
   printf(buf);
-  delete buf;
+  delete buf;*/
+  int index = 0;
+  char current;
+
+  while (index < count) {
+    current=string[index++];
+    if (current == '\n') {
+      this->cur_x = 0;
+      this->cur_y++;
+    }
+
+    if (current == 0x1b && string[index] == '[') {
+      index++;
+      char* parameterStart = (string+index);
+      while (string[index] >= 0x30 && string[index] <= 0x3F)
+        index++;
+      char* parameterEnd = (string+index);
+
+      char* intermediateStart = (string+index);
+      while (string[index] >= 0x20 && string[index] <= 0x2F)
+        index++;
+
+      char final = *(string+(index++));
+
+      switch (final) {
+        case 'A':
+          this->cur_y -= clamp(strToInt(parameterStart), 0, this->cur_y);
+          break;
+        case 'B':
+          this->cur_y += clamp(strToInt(parameterStart), 0, this->height - this->cur_y);
+          break;
+        case 'C':
+          this->cur_x += clamp(strToInt(parameterStart), 0, this->width - this->cur_x);
+          break;
+        case 'D':
+          this->cur_x -= clamp(strToInt(parameterStart), 0, this->cur_x);
+          break;
+        case 'H': {
+          char* s=parameterStart;
+          while (*s != ';' && s < parameterEnd)
+            s++;
+          s++;
+          this->cur_y = clamp(strToInt(parameterStart), 1, this->height) - 1;
+          this->cur_x = clamp(strToInt(s), 1, this->width) - 1;
+          break;
+        }
+      }
+
+      continue;
+    }
+
+    if (current == '\b') {
+      if (this->cur_x > 0) {
+        this->cur_x--;
+      } else if (this->cur_y > 0) {
+        this->cur_y--;
+        this->cur_x = this->width-1;
+      }
+
+      int mem_pos = this->cur_y * this->width + this->cur_x;
+      
+      this->putchar(mem_pos, ' ');
+      continue;
+    }
+
+    if (this->cur_x == this->width) {
+      this->cur_x = 0;
+      this->cur_y++;
+    }
+
+    if (this->cur_y == this->height)
+      this->scroll_up();
+
+    if (current != '\n') {
+      int mem_pos = this->cur_y * this->width + this->cur_x++;
+      
+      this->putchar(mem_pos, current);
+    }
+  }
+
+  this->set_curpos(this->cur_x, this->cur_y);
 }
 
 int Terminal::read(uint32_t count, uint8_t* buffer) {}

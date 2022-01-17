@@ -21,18 +21,36 @@ void set_entry(uint8_t interrupt_number, uint16_t code_segment, void(*handler)()
   };
 }
 
-void page_fault(frame_struct* frame) {
-  // Clear interrupts, we don't want to perform a context switch during a page fault.
+void handle_fault(frame_struct* frame) {
+  // Clear interrupts, we don't want to perform a context switch whilst handling a fault.
   asm ("cli");
   uint32_t problem_address;
-  asm("mov %%cr2, %0" : "=a" (problem_address) :);
-  Global::kernel->terminal->printf("(CS %x EIP %x): Page Fault at %x Error Code: %x Gate: %d\n", frame->cs, frame->eip, problem_address, frame->errcode, frame->gate);
+  asm ("mov %%cr2, %0" : "=a" (problem_address):);
+  Global::kernel->terminal->printf("(CS %x EIP %x): ", frame->cs, frame->eip);
+  switch (frame->gate) {
+    case 0: // Divide by zero
+      Global::kernel->terminal->printf("Divide by Zero");
+      break;
+    case 6: // Invalid Opcode
+      Global::kernel->terminal->printf("Invalid Opcode");
+      break;
+    case 13: // GPF
+      Global::kernel->terminal->printf("General Protection Fault!");
+      break;
+    case 14: // Page Fault
+      Global::kernel->terminal->printf("Page Fault at %x", problem_address);
+      break;
+    default:
+      Global::kernel->terminal->printf("Unkown Fault!");
+      break;
+  } 
+  Global::kernel->terminal->printf(" Error Code: %x\n", frame->errcode);
   if (!(frame->cs & 3)) {
-    Global::kernel->terminal->printf("[FATAL] Kernel Page Fault!!!\n");
+    Global::kernel->terminal->printf("[FATAL] Kernel Fault!!!\n");
     while (1) asm("hlt");
   } else {
     // Print an error message.
-    Global::kernel->terminal->printf("PID %d Terminated due to page fault!\n", Global::currentProc->PID);
+    Global::kernel->terminal->printf("PID %d Terminated due to fault!\n", Global::currentProc->PID);
     asm volatile ("mov %0, %%esp" ::"m"(Global::kernel->globalISRStack));
     Global::kernel->PD->select();
 
@@ -48,11 +66,6 @@ void page_fault(frame_struct* frame) {
 }
 
 void ignore_interrupt(frame_struct* frame) {}
-
-void gpf(frame_struct* frame) {
-  printf("(EIP %x) General Protection Fault %x\n", frame->eip, frame->errcode);
-  while (1) asm("hlt");
-}
 
 void context_switch(frame_struct* frame) {
   // When any interrupt occurs (including context_switch), SS:ESP is set to
@@ -70,77 +83,65 @@ void context_switch(frame_struct* frame) {
 
   asm ("cli"); // Disable interrupts whilst handling the context switch.
 
-  // Restore eax
-  asm ("mov %0, %%eax"::"r"(frame->eax));
+  xnoe::linkedlist<Process*>* processes = &Global::kernel->processes;
 
-  Process* currentProc = 0;
-  Process* nextProc = 0;
-
-  if (Global::currentProcValid) {
-    currentProc = Global::currentProc;
-    // Write current esp to currentProc->kernelStackPtr
-    asm ("mov %%esp, %0" : "=a" (currentProc->kernelStackPtr):);
+  if (!processes->start) {
+    Global::kernel->terminal->printf("[FATAL] No more processes! Halting!\n");
+    while (1) asm ("hlt");
   }
 
-  if (currentProc || !Global::currentProcValid) {
-    xnoe::linkedlist<Process*>* processes = &Global::kernel->processes;
-    
-    // This cursed bit of code first determines if the processes list is longer than 1 and if it is
-    // - Determines if it has 2 or more elements
-    //   - If it has two, swap the first and last, update prev and next of each to be null or the other item
-    //   - If it has more than two, add the start to the end then set start to the second element
-    if (processes->start) {
-      if (processes->start->next != 0) {
-        if (processes->end->prev == processes->start) {
-          xnoe::linkedlistelem<Process*>* tmp = processes->start;
-          processes->start = processes->end;
-          processes->end = tmp;
+  if (Global::currentProcValid)
+    asm ("mov %%esp, %0" : "=a" (Global::currentProc->kernelStackPtr):);
+  
+  // This cursed bit of code first determines if the processes list is longer than 1 and if it is
+  // - Determines if it has 2 or more elements
+  //   - If it has two, swap the first and last, update prev and next of each to be null or the other item
+  //   - If it has more than two, add the start to the end then set start to the second element
+  if (Global::currentProc) {
+    if (processes->start->next != 0) {
+      if (processes->end->prev == processes->start) {
+        xnoe::linkedlistelem<Process*>* tmp = processes->start;
+        processes->start = processes->end;
+        processes->end = tmp;
 
-          processes->start->prev = 0;
-          processes->end->next = 0;
-          processes->end->prev = processes->start;
-          processes->start->next = processes->end;
-        } else {
-          processes->end->next = processes->start;
-          processes->start = processes->start->next;
-          processes->start->prev = 0;
-          xnoe::linkedlistelem<Process*>* tmp = processes->end;
-          processes->end = processes->end->next;
-          processes->end->next = 0;
-          processes->end->prev = tmp;
-        }
+        processes->start->prev = 0;
+        processes->end->next = 0;
+        processes->end->prev = processes->start;
+        processes->start->next = processes->end;
+      } else {
+        processes->end->next = processes->start;
+        processes->start = processes->start->next;
+        processes->start->prev = 0;
+        xnoe::linkedlistelem<Process*>* tmp = processes->end;
+        processes->end = processes->end->next;
+        processes->end->next = 0;
+        processes->end->prev = tmp;
       }
     }
+  }
 
-    // Get the next process.
-    if (processes->start)
-      nextProc = processes->start->elem;
+  Global::currentProc = processes->start->elem;
 
-    if (nextProc == 0) {
-      Global::kernel->terminal->printf("[FATAL] No more processes! Halting!\n");
-      while (1) asm ("hlt");
-    }
+  // Select the next processes page directory
+  asm volatile ("mov %0, %%cr3" : : "r" (Global::currentProc->PD->phys_addr)); 
+  // Restore kernelStackPtr of the new process.
+  asm volatile ("mov %0, %%esp" : : "m" (Global::currentProc->kernelStackPtr));
 
-    Global::currentProc = nextProc;
+  // At this point interrupts are disabled till iret so we can safely set
+  // Global::tss->esp0 to the new Process's kernelStackPtrDefault
 
-    // Select the next processes page directory
-    asm volatile ("mov %0, %%cr3" : : "r" (nextProc->PD->phys_addr)); 
-    // Restore kernelStackPtr of the new process.
-    asm volatile ("mov %0, %%esp" : : "m" (Global::kernel->processes.start->elem->kernelStackPtr));
+  Global::tss->esp0 = Global::currentProc->kernelStackPtrDefault;
 
-    // At this point interrupts are disabled till iret so we can safely set
-    // Global::tss->esp0 to the new Process's kernelStackPtrDefault
+  // Set the current proc to valid
+  Global::currentProcValid = true;
 
-    Global::tss->esp0 = Global::kernel->processes.start->elem->kernelStackPtrDefault;
-
-    // Set the current proc to valid 
-    Global::currentProcValid = true;
-
-    if (Global::currentProc->firstRun) {
-      Global::currentProc->firstRun = false;
-      asm("add $4, %esp");
-      asm("ret");
-    }
+  if (Global::currentProc->firstRun) {
+    Global::currentProc->firstRun = false;
+    asm("add $4, %esp");
+    asm("ret");
+  } else {
+    asm("add $28, %esp");
+    asm("ret");
   }
 }
 
@@ -153,12 +154,15 @@ void syscall(frame_struct* frame) {
   // 4: localalloc: LocalAlloc: Allocate under current process (in esi: size; out eax void* ptr)
   // 5: localdelete: LocalDelete: Deallocate under current process (in esi: pointer)
   // 6: X
-  // 7: X
+  // 7: fork :: char* filename esi -> int PID // Spawns a process and returns its PID.
   // 8: getPID: returns the current process's PID (out eax: uint32_t)
   // 9: getFileHandler :: char* path esi -> void* eax // Returns a file handlers for a specific file
   // 10: read :: uint32_t count ebx -> void* filehandler esi -> uint8_t* outputbuffer edi -> int read // Reads from a file handler in to a buffer, returns successful read
   // 11: write :: uint32_t count ebx -> void* filehandler esi -> uint8_t* inputbuffer edi -> int written // Reads from a buffer in to a file, returns successful written
   // 12: bindToKeyboard :: void -> void // Binds the current process's stdout to the keyboard.
+  
+  // 13: bindStdout :: int PID esi -> int filehandler // Returns a filehandler for a CircularRWBuffer binding stdout of another process.
+  // 14: bindStdin :: int PID esi -> int filehandler // Returns a filehandler for a CircularRWBuffer binding stdin of another process.
 
   // File handlers:
   // 0: Stdout
@@ -190,8 +194,16 @@ void syscall(frame_struct* frame) {
       break;
     case 6:
       break;
-    case 7:
+    case 7: {
+      asm("cli");
+      char filename[12];
+      for (int i=0; i<12; i++)
+        filename[i] = ((char*)(frame->esi))[i];
+      Process* p = Global::kernel->createProcess(filename);
+      rval = p->PID;
+      asm("sti");
       break;
+    }
     case 8:
       rval = currentProc->PID;
       break;
@@ -208,8 +220,10 @@ void syscall(frame_struct* frame) {
         rval = stdin->read(frame->ebx, edi);
       } else {
         xnoe::Maybe<ReadWriter*> fh = Global::kernel->FH->get(esi);
-        if (!fh.is_ok())
+        if (!fh.is_ok()) {
+          rval = 0;
           break;
+        }
         
         ReadWriter* rw = fh.get();
         rval = rw->read(frame->ebx, edi);
@@ -226,8 +240,10 @@ void syscall(frame_struct* frame) {
         rval = stdout->write(frame->ebx, edi);
       } else {
         xnoe::Maybe<ReadWriter*> fh = Global::kernel->FH->get(esi);
-        if (!fh.is_ok())
+        if (!fh.is_ok()) {
+          rval = 0;
           break;
+        }
         
         ReadWriter* rw = fh.get();
         rval = rw->write(frame->ebx, edi);
@@ -241,6 +257,33 @@ void syscall(frame_struct* frame) {
       
       currentProc->stdin = new CircularRWBuffer(currentProc->PID, 0);
       Global::kernel->KBListeners.append(currentProc);
+      break;
+    
+    case 13: {
+      xnoe::Maybe<Process*> pm = Global::kernel->pid_map->get(esi);
+      if (!pm.is_ok())
+        break;
+      Process* p = pm.get();
+      if (!p->stdout) {
+        ReadWriter* buffer = new CircularRWBuffer(currentProc->PID, esi);
+        p->stdout = buffer;
+        rval = Global::kernel->mapFH(buffer);
+      }
+      break;
+    }
+
+    case 14: {
+      xnoe::Maybe<Process*> pm = Global::kernel->pid_map->get(esi);
+      if (!pm.is_ok())
+        break;
+      Process* p = pm.get();
+      if (!p->stdin) {
+        ReadWriter* buffer = new CircularRWBuffer(esi, currentProc->PID);
+        p->stdin = buffer;
+        rval = Global::kernel->mapFH(buffer);
+      }
+      break;
+    }
 
     default:
       break;
@@ -259,12 +302,28 @@ void init_idt() {
   for (int i=0; i<256; i++)
     gates[i] = &ignore_interrupt;
   
-  gates[0x20] = &context_switch;
-  gates[0xd] = &gpf;
-  gates[0xe] = &page_fault;
-  gates[0x7f] = &syscall;
+  gates[32] = &context_switch;
+  gates[0] = &handle_fault;
+  gates[5] = &handle_fault;
+  gates[6] = &handle_fault;
+  gates[7] = &handle_fault;
+  gates[9] = &handle_fault;
+  gates[10] = &handle_fault;
+  gates[11] = &handle_fault;
+  gates[12] = &handle_fault;
+  gates[13] = &handle_fault;
+  gates[14] = &handle_fault;
+  gates[16] = &handle_fault;
+  gates[17] = &handle_fault;
+  gates[19] = &handle_fault;
+  gates[20] = &handle_fault;
+  gates[21] = &handle_fault;
+  gates[29] = &handle_fault;
+  gates[30] = &handle_fault;
+  gates[31] = &handle_fault;
+  gates[127] = &syscall;
 
-  idt[0x7f].privilege = 3;
+  idt[127].privilege = 3;
 
   outb(0x20, 0x11);
   outb(0xA0, 0x11);

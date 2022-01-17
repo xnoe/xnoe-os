@@ -44,10 +44,7 @@ int main() {
   
   term->printf("KERNEL OK!\n");
 
-  Global::currentProc = &kernel;
-
   Process* p1 = kernel.createProcess("WORLD   BIN", term);
-  //kernel.createProcess("HELLO   BIN");
 
   init_keyboard();
   

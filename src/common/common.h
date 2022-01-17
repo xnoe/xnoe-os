@@ -9,6 +9,10 @@ void* localalloc(uint32_t size);
 void localdelete(void* ptr);
 uint32_t filesize(char* filename);
 
+uint32_t fork(char* filename);
+uint32_t bindStdout(uint32_t PID);
+uint32_t bindStdin(uint32_t PID);
+
 uint32_t getPID();
 
 int read(uint32_t count, void* filehandler, uint8_t* buffer);

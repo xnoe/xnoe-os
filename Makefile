@@ -2,7 +2,8 @@ CFLAGS = -g -std=gnu11 -m32 -mgeneral-regs-only -nostdlib -fno-builtin -fno-exce
 CXXFLAGS = -g -m32 -fno-use-cxa-atexit -mgeneral-regs-only -nostdlib -fno-builtin -fno-rtti -fno-exceptions -fno-leading-underscore -fpermissive -fno-pie -fno-stack-protector -I.
 LDFLAGS = 
 
-DISK_IMG_FILES = build/kernel/kernel.bin build/world/world.bin hello.txt alpha.txt
+DISK_IMG_FILES = build/kernel/kernel.bin build/world/world.bin hello.txt alpha.txt \
+								 build/hello/hello.bin
 
 KERNEL_CPP_SRCS = $(wildcard src/kernel/*.cpp) $(wildcard src/kernel/*/*.cpp) 
 KERNEL_ASM_SRCS = $(wildcard src/kernel/*.asm)
@@ -44,6 +45,7 @@ disk.img: clean prepare build/boot/boot.bin build/boot_stage2/boot.bin $(DISK_IM
 	dd obs=512 seek=1 if=build/boot_stage2/boot.bin of=disk.img conv=notrunc
 	mount disk.img img.d
 	cp $(DISK_IMG_FILES) img.d/
+	sleep 0.1
 	umount img.d
 	chmod 777 disk.img
 

@@ -59,44 +59,26 @@ Process::Process(uint32_t PID, PageDirectory* inherit, uint32_t inheritBase, cha
 
   // We also need to initialise ESP and the stack
   uint32_t* stack32 = ((uint32_t)this->kernelStackPtr);
-  stack32--;
-  *stack32 = 0x23; // SS
-  stack32--;
-  *stack32 = ((uint32_t)this->stack + 0x8000); // ESP
-  stack32--;
-  *stack32 = 0x200; // EFLAGS
-  stack32--;
-  *stack32 = 27; // CS 0x08
-  stack32--;
-  *stack32 = (uint32_t)program_data; // EIP
-
-  stack32--;
-  *stack32 = ((uint32_t)this->stack + 0x8000); // EBP
+  *(--stack32) = 0x23; // SS
+  *(--stack32) = ((uint32_t)this->stack + 0x8000); // ESP
+  *(--stack32) = 0x200; // EFLAGS
+  *(--stack32) = 27; // CS
+  *(--stack32) = (uint32_t)program_data; // EIP
+  *(--stack32) = ((uint32_t)this->stack + 0x8000); // EBP
 
   uint32_t rEBP = stack32;
 
+  //stack32--;
+  *(--stack32) = 0;    // EAX
+  *(--stack32) = 0;    // ECX
+  *(--stack32) = 0;    // EDX
+  *(--stack32) = 0;    // EBX
+  *(--stack32) = 0;    // ESP
+  *(--stack32) = rEBP; // EBP
+  *(--stack32) = 0;    // ESI
+  *(--stack32) = 0;    // EDI
   stack32--;
-  *stack32 = 0; // EAX
-  stack32--;
-  *stack32 = 0; // ECX
-  stack32--;
-  *stack32 = 0;  // EDX
-  stack32--;
-  *stack32 = 0;  // EBX
-  stack32--;
-  *stack32 = 0; // ESP
-  stack32--;
-  *stack32 = rEBP; // EBP
-  stack32--;
-  *stack32 = 0; // ESI
-  stack32--;
-  *stack32 = 0; // EDI
-
-  stack32--;
-
-  stack32--;
-  *stack32 = &catchall_return; // cachall_return
-
+  *(--stack32) = &catchall_return; // cachall_return
   stack32--;
 
   this->kernelStackPtr = stack32;

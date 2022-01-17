@@ -244,6 +244,9 @@ void* Allocator::allocate(uint32_t size) {
     this->PD->map(phys_addr, virt_addr + 4096 * i, this->privilege);
   }
 
+  for (int i=0; i<4096; i++)
+    ((uint8_t*)virt_addr)[i] = 0;
+
   return virt_addr;
 }
 

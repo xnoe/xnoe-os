@@ -7,6 +7,8 @@
 #include "terminal.h"
 
 class Kernel : public Process {
+private:
+  int lastFH;
 public:
   uint32_t currentPID;
   uint32_t stack;
@@ -26,6 +28,8 @@ public:
   Process* createProcess(char* filename);
   Process* createProcess(char* filename, ReadWriter* stdout);
   void destroyProcess(Process* p);
+
+  int mapFH(ReadWriter* fh);
   //void loadPrimaryStack();
 };
 

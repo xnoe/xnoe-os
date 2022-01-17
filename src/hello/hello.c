@@ -1,16 +1,40 @@
 #include "../common/common.h"
 
-int main() {
-  uint32_t counter = 0;
-  uint32_t PID = getPID();
-  char intbuffer[32];
-  uint32_t index = int_to_decimal(PID, intbuffer);
-  while (1) {
-    counter++;
-    if (counter == 312500) {
-      print(intbuffer+index);
-      print(" ");
-      counter = 0;
+void readline(int count, char* buffer) {
+  int index = 0;
+  char c;
+  while (index < count) {
+    if (read(1, 1, &c)) {
+      if (c == '\n')
+        break;
+      if (c == '\b') {
+        if (index == 0)
+          continue;
+        else {
+          index--;
+          buffer[index] = 0;
+          write(1, 0, &c);
+          continue;
+        }
+      }
+
+      buffer[index++] = c;
+      write(1, 0, &c);
     }
+  }
+  print("\n");
+}
+
+int main() {
+  print("Hello, World!\n");
+  char buffer[32];
+  while (1) {
+    for (int i=0; i<32; i++)
+      buffer[i] = 0;
+    print(">>> ");
+    readline(32, buffer);
+    print("You said: ");
+    print(buffer);
+    print("\n\n");
   }
 }

@@ -11,11 +11,14 @@ Kernel::Kernel(PageDirectory* page_directory, PageMap* phys, PageMap* virt, uint
 
   this->stack = stack;
 
+  this->lastFH = 8;
+
   //this->processes.append(this);
 }
 
 void Kernel::init_kernel() {
   this->pid_map = new xnoe::hashtable<uint32_t, Process*>();
+  this->FH = new xnoe::hashtable<void*, ReadWriter*>();
   this->globalISRStack = (new uint8_t[0x8000]) + 0x8000;
 }
 
@@ -39,6 +42,11 @@ void Kernel::destroyProcess(Process* p) {
   this->processes.remove(p);
   this->pid_map->remove(p->PID, p);
   delete p;
+}
+
+int Kernel::mapFH(ReadWriter* fh) {
+  this->FH->set(this->lastFH++, fh);
+  return this->lastFH - 1;
 }
 
 //void Kernel::loadPrimaryStack() {

@@ -36,12 +36,15 @@ bool shift_on = false;
 void keyboard_interrupt(frame_struct* frame) {
   uint8_t decoded = 0;
   uint8_t current_scancode = inb(0x60);
-  outb(0x20, 0x21);
-  if ((current_scancode&0x7f) == 0x2a)
+  if ((current_scancode&0x7f) == 0x2a) {
     shift_on = !(current_scancode&0x80);
+    return;
+  }
   
-  if (current_scancode == 0x3a)
+  if (current_scancode == 0x3a) {
     caps_on ^= 1;
+    return;
+  }
 
   if (shift_on)
     decoded = key_to_char_shift[current_scancode&0x7f];
