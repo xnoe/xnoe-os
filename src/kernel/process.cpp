@@ -47,6 +47,8 @@ Process::Process(uint32_t PID, PageDirectory* inherit, uint32_t inheritBase, cha
   for (int index = inheritBase >> 22; index < 1024; index++)
     this->PD->page_directory[index] = inherit->page_directory[index];
 
+  uint8_t* program_data = this->allocate(file_size(filename) + 12) + 12;
+
   this->stack = this->allocate(0x8000);
   this->kernelStackPtr = (new uint8_t[0x1000]) + 0xffc;
   this->kernelStackPtrDefault = this->kernelStackPtr;
@@ -54,8 +56,6 @@ Process::Process(uint32_t PID, PageDirectory* inherit, uint32_t inheritBase, cha
   uint32_t pCR3;
   asm ("mov %%cr3, %0" : "=a" (pCR3) :);
   this->PD->select();
-
-  uint8_t* program_data = this->allocate(file_size(filename) + 12) + 12;
 
   // We also need to initialise ESP and the stack
   uint32_t* stack32 = ((uint32_t)this->kernelStackPtr);

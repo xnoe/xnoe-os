@@ -1,6 +1,15 @@
 #include "../common/common.h"
 #include <stdbool.h>
 
+typedef struct {
+  char* buffer;
+  int x;
+  int y;
+  uint32_t process;
+  uint32_t stdin;
+  uint32_t stdout;
+} procbuffer;
+
 void scrollBuffer(char* buf) {
   for (int y=0; y<21; y++)
     for (int x=0; x<38; x++)
@@ -10,43 +19,43 @@ void scrollBuffer(char* buf) {
         buf[y*38+x] = ' ';
 }
 
-void writeToBuf(char c, char* buf, int* cx, int* cy) {
+void writeToBuf(char c, procbuffer* buf) {
   switch (c) {
     case '\n':
-      *cx = 0;
-      (*cy)++;
+      buf->x = 0;
+      buf->y++;
       break;
     
     case '\b':
-      if (*cx > 0)
-        (*cx)--;
-      else if (*cy > 0) {
-        *cx = 37;
-        (*cy)--;
+      if (buf->x > 0)
+        buf->x--;
+      else if (buf->y > 0) {
+        buf->x = 37;
+        buf->y--;
       }
-      buf[(*cy)*38+(*cx)] = ' ';
+      buf->buffer[buf->y*38+buf->x] = ' ';
       break;
 
     default:
-      buf[(*cy)*38+(*cx)++] = c;
+      buf->buffer[buf->y*38+buf->x++] = c;
   }
-  if (*cx == 38) {
-    *cx = 0;
-    (*cy)++;
+  if (buf->x == 38) {
+    buf->x = 0;
+    buf->y++;
   }
-  if (*cy == 21) {
-    (*cy)--;
-    scrollBuffer(buf);
+  if (buf->y == 21) {
+    buf->y--;
+    scrollBuffer(buf->buffer);
   }
 }
 
-void writeStrToBuf(char* c, char* buf, int* cx, int* cy) {
+void writeStrToBuf(char* c, procbuffer* b) {
   char* s = c;
   while(*s)
-    writeToBuf(*(s++), buf, cx, cy);
+    writeToBuf(*(s++), b);
 }
 
-void displayBuf(char* buf, int dx, int dy) {
+void displayBuf(procbuffer* b, int dx, int dy) {
   char pset[9] = "\x1b[00;00H";
   for (int i=0; i<dy;i++) {
     pset[3]++;
@@ -64,13 +73,76 @@ void displayBuf(char* buf, int dx, int dy) {
   }
   for (int i=0; i<21; i++) {
     print(pset);
-    write(38, 0, buf+(38*i));
+    write(38, 0, b->buffer+(38*i));
     pset[3]++;
     if (pset[3] == 0x3a) {
       pset[3] = 0x30;
       pset[2]++;
     }
   }
+}
+
+void setCurPos(int x, int y) {
+  char pset[9] = "\x1b[00;00H";
+  for (int i=0; i<y;i++) {
+    pset[3]++;
+    if (pset[3] == 0x3a) {
+      pset[3] = 0x30;
+      pset[2]++;
+    }
+  }
+  for (int i=0; i<x;i++) {
+    pset[6]++;
+    if (pset[6] == 0x3a) {
+      pset[6] = 0x30;
+      pset[5]++;
+    }
+  }
+  print(pset);
+}
+
+void readline(int count, char* buffer) {
+  int index = 0;
+  char c;
+  while (index < count) {
+    if (read(1, 1, &c)) {
+      if (c == '\n')
+        break;
+      if (c == '\b') {
+        if (index == 0)
+          continue;
+        else {
+          index--;
+          buffer[index] = 0;
+          write(1, 0, &c);
+          continue;
+        }
+      }
+
+      buffer[index++] = c;
+      write(1, 0, &c);
+    }
+  }
+}
+
+bool strcmp(char* a, char* b) {
+  int index=0;
+  while (a[index])
+    if (a[index] == b[index])
+      index++;
+    else
+      return false;
+  return true;
+}
+
+bool strcmpcnt(int count, char* a, char* b) {
+  int index=0;
+  while (index < count)
+    if (a[index] == b[index])
+      index++;
+    else
+      return false;
+  return true;
 }
 
 int main() {
@@ -106,32 +178,65 @@ int main() {
   uint32_t p2out = bindStdout(p2);
   uint32_t p2in = bindStdin(p2);
 
-  char* buf1 = localalloc(21 * 38);
-  char* buf2 = localalloc(21 * 38);
+  procbuffer b1 = {
+    .buffer = localalloc(21 * 38),
+    .x = 0,
+    .y = 0,
+    .process = p1,
+    .stdin = p1in,
+    .stdout = p1out
+  };
 
-  int b1cx = 0;
-  int b1cy = 0;
+  procbuffer b2 = {
+    .buffer = localalloc(21 * 38),
+    .x = 0,
+    .y = 0,
+    .process = p2,
+    .stdin = p2in,
+    .stdout = p2out
+  };
 
-  int b2cx = 0;
-  int b2cy = 0;
+  procbuffer* selectedBuf = &b1;
 
-  char* selectedBuf = buf1;
-  uint32_t selectedOut = p1out;
-  uint32_t selectedIn = p1in;
-  
+  writeStrToBuf("XoSH (Xnoe SHell) v0.0.1\nPress : to use commands.\n :help for help.\n", &b1);
 
   while (1) {
     char c;
-    if (read(1, selectedOut, &c))
-      writeToBuf(c, selectedBuf, &b1cx, &b1cy);
-    if (read(1, p2out, &c))
-      writeToBuf(c, buf2, &b2cx, &b2cy);
+    if (read(1, b1.stdout, &c))
+      writeToBuf(c, &b1);
+    if (read(1, b2.stdout, &c))
+      writeToBuf(c, &b2);
     if (read(1, 1, &c)) {
-      write(1, selectedIn, &c);
-      write(1, p2in, &c);
+      if (c == ':') {
+        char buf[32] = {0};
+        print("\x1b[24;2H");
+        print(":                                ");
+        print("\x1b[24;3H");
+        readline(32, buf);
+        if (strcmpcnt(6, buf, "switch")) {
+          if (selectedBuf == &b1) {
+            selectedBuf = &b2;
+          } else {
+            selectedBuf = &b1;
+          }
+        } else if (strcmpcnt(4, buf, "help")) {
+          writeStrToBuf("\n--------\n", selectedBuf);
+          writeStrToBuf(":help\n", selectedBuf);
+          writeStrToBuf("  Displays this message.\n", selectedBuf);
+          writeStrToBuf(":switch\n", selectedBuf);
+          writeStrToBuf("  Switches which process you're using\n", selectedBuf);
+          writeStrToBuf(":kill\n", selectedBuf);
+          writeStrToBuf("  Kills the current process\n", selectedBuf);
+          writeStrToBuf(":load <filename>\n", selectedBuf);
+          writeStrToBuf("  Loads and executes the program <filename>\n", selectedBuf);
+          writeStrToBuf("--------\n", selectedBuf);
+        }
+      } else {
+        write(1, selectedBuf->stdin, &c);
+      }
     }
     
-    displayBuf(selectedBuf, 2, 2);
-    displayBuf(buf2, 42, 2);
+    displayBuf(&b1, 2, 2);
+    displayBuf(&b2, 42, 2);
   }
 }
