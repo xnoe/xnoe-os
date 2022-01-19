@@ -46,7 +46,7 @@ public:
 
   Process(uint32_t PID, void* stack, PageDirectory* page_directory, PageMap* phys, PageMap* virt, uint32_t virt_alloc_base);
   Process(uint32_t PID);
-  Process(uint32_t PID, PageDirectory* inherit, uint32_t inheritBase, char* filename);
+  Process(uint32_t PID, PageDirectory* inherit, uint32_t inheritBase, uint32_t fh);
 
   ~Process(); // Iterate through allocations and free those; delete stack
 

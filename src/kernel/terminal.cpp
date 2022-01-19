@@ -182,7 +182,7 @@ void Terminal::printf(const char* string, ...) {
   va_end(ptr);
 }
 
-int Terminal::write(uint32_t count, uint8_t* string) {
+uint32_t Terminal::write(uint32_t count, uint8_t* string) {
   /*char* buf = new char[count+1];
   for (int i=0;i<count;i++) {
     buf[i] = buffer[i];
@@ -272,7 +272,7 @@ int Terminal::write(uint32_t count, uint8_t* string) {
   this->set_curpos(this->cur_x, this->cur_y);
 }
 
-int Terminal::read(uint32_t count, uint8_t* buffer) {}
+uint32_t Terminal::read(uint32_t count, uint8_t* buffer) {}
 
 void Terminal::clear_screen() {
   for (int i=0; i < width * height * pages; i++) {

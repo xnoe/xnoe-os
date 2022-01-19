@@ -16,7 +16,6 @@ public:
   Terminal* terminal;
 
   xnoe::hashtable<uint32_t, Process*>* pid_map; // Map of PIDs -> Process*s
-  xnoe::hashtable<void*, ReadWriter*>* FH; // Map of File Handlers -> Read Writer
 
   xnoe::linkedlist<Process*> processes;
   xnoe::linkedlist<Process*> KBListeners;
@@ -25,11 +24,12 @@ public:
 
   void init_kernel();
 
-  Process* createProcess(char* filename);
-  Process* createProcess(char* filename, ReadWriter* stdout);
+  Process* createProcess(uint32_t fh);
+  Process* createProcess(uint32_t fh, ReadWriter* stdout);
   void destroyProcess(Process* p);
 
   int mapFH(ReadWriter* fh);
+  void unmapFH(uint32_t fh);
   //void loadPrimaryStack();
 };
 

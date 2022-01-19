@@ -6,6 +6,7 @@ namespace Global {
   Process* currentProc = 0;
   tss_struct* tss = 0;
   bool currentProcValid = false;
+  xnoe::hashtable<void*, ReadWriter*>* FH; // Map of File Handlers -> Read Writer
 }
 
 void* operator new (uint32_t size) {

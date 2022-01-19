@@ -38,8 +38,8 @@ public:
 
   void printf(const char* string, ...);
 
-  int write(uint32_t count, uint8_t* buffer) override;
-  int read(uint32_t count, uint8_t* buffer) override;
+  uint32_t write(uint32_t count, uint8_t* buffer) override;
+  uint32_t read(uint32_t count, uint8_t* buffer) override;
 
   void clear_screen();
   void set_curpos(int x, int y);

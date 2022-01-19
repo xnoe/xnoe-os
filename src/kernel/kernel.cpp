@@ -18,12 +18,12 @@ Kernel::Kernel(PageDirectory* page_directory, PageMap* phys, PageMap* virt, uint
 
 void Kernel::init_kernel() {
   this->pid_map = new xnoe::hashtable<uint32_t, Process*>();
-  this->FH = new xnoe::hashtable<void*, ReadWriter*>();
+  Global::FH = new xnoe::hashtable<void*, ReadWriter*>();
   this->globalISRStack = (new uint8_t[0x8000]) + 0x8000;
 }
 
-Process* Kernel::createProcess(char* filename) {
-  Process* p = new Process(currentPID, this->PD, 0xc0000000, filename);
+Process* Kernel::createProcess(uint32_t fh) {
+  Process* p = new Process(currentPID, this->PD, 0xc0000000, fh);
   this->pid_map->set(currentPID, p);
   currentPID++;
 
@@ -32,21 +32,25 @@ Process* Kernel::createProcess(char* filename) {
   return p;
 }
 
-Process* Kernel::createProcess(char* filename, ReadWriter* stdout) {
-  Process* p = this->createProcess(filename);
+Process* Kernel::createProcess(uint32_t fh, ReadWriter* stdout) {
+  Process* p = this->createProcess(fh);
   p->stdout = stdout;
   return p;
 }
 
 void Kernel::destroyProcess(Process* p) {
   this->processes.remove(p);
-  this->pid_map->remove(p->PID, p);
+  this->pid_map->remove(p->PID);
   delete p;
 }
 
 int Kernel::mapFH(ReadWriter* fh) {
-  this->FH->set(this->lastFH++, fh);
+  Global::FH->set(this->lastFH++, fh);
   return this->lastFH - 1;
+}
+
+void Kernel::unmapFH(uint32_t fh) {
+  Global::FH->remove((void*)fh);
 }
 
 //void Kernel::loadPrimaryStack() {

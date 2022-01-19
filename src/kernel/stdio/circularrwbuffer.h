@@ -12,8 +12,9 @@ private:
 public:
   CircularRWBuffer(uint32_t reader, uint32_t writer);
 
-  int read(uint32_t count, uint8_t* buffer) override;
-  int write(uint32_t count, uint8_t* buffer) override;
+  uint32_t read(uint32_t count, uint8_t* buffer) override;
+  uint32_t write(uint32_t count, uint8_t* buffer) override;
+  uint32_t size() override;
 };
 
 #endif

@@ -44,7 +44,10 @@ int main() {
   
   term->printf("KERNEL OK!\n");
 
-  Process* p1 = kernel.createProcess("WORLD   BIN", term);
+  ReadWriter* worldbin = new FATFileReadWriter(0, "etc/world.bin");
+  uint32_t fh = kernel.mapFH(worldbin);
+
+  Process* p1 = kernel.createProcess(fh, term);
 
   init_keyboard();
   

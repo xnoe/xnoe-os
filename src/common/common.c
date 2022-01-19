@@ -28,8 +28,8 @@ int write(uint32_t count, void* filehanlder, uint8_t* buffer) {
   asm volatile ("mov $11, %%eax; mov %0, %%ebx; mov %1, %%esi; mov %2, %%edi; int $0x7f" : : "m" (count), "m" (filehanlder), "m" (buffer): "ebx", "esi", "edi");
 }
 
-uint32_t fork(char* filename) {
-  asm volatile("mov $7, %%eax; mov %0, %%esi; int $0x7f" : : "m" (filename) : "esi");
+uint32_t fork(uint32_t fh) {
+  asm volatile("mov $7, %%eax; mov %0, %%esi; int $0x7f" : : "m" (fh) : "esi");
 }
 
 uint32_t bindStdout(uint32_t PID) {
@@ -38,6 +38,14 @@ uint32_t bindStdout(uint32_t PID) {
 
 uint32_t bindStdin(uint32_t PID) {
   asm volatile("mov $14, %%eax; mov %0, %%esi; int $0x7f" : : "m" (PID) : "esi");
+}
+
+int fopen(char* filename) {
+  asm volatile("mov $15, %%eax; mov %0, %%esi; int $0x7f" : : "m" (filename) : "esi");
+}
+
+void fclose(uint32_t fh) {
+  asm volatile("mov $16, %%eax; mov %0, %%esi; int $0x7f" : : "m" (fh) : "esi");
 }
 
 void bindToKeyboard() {

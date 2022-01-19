@@ -12,8 +12,9 @@ void ReadWriter::giveWritePerm(uint32_t PID) {
   this->allowedWrite.append(PID);
 }
 
-int ReadWriter::read(uint32_t count, uint8_t* buffer){}
-int ReadWriter::write(uint32_t count, uint8_t* buffer){}
+uint32_t ReadWriter::read(uint32_t count, uint8_t* buffer){}
+uint32_t ReadWriter::write(uint32_t count, uint8_t* buffer){}
+uint32_t ReadWriter::size(){}
 
 bool ReadWriter::canRead(uint32_t PID) {
   if (this->owner == PID)

@@ -164,6 +164,9 @@ void syscall(frame_struct* frame) {
   // 13: bindStdout :: int PID esi -> int filehandler // Returns a filehandler for a CircularRWBuffer binding stdout of another process.
   // 14: bindStdin :: int PID esi -> int filehandler // Returns a filehandler for a CircularRWBuffer binding stdin of another process.
 
+  // 15: fopen :: char* path esi -> int filehandler // Returns a filehandler to the file.
+  // 16: fclose :: int filehandler esi -> void // Closes a file handler.
+
   // File handlers:
   // 0: Stdout
   // 1: Stdin
@@ -196,10 +199,7 @@ void syscall(frame_struct* frame) {
       break;
     case 7: {
       asm("cli");
-      char filename[12];
-      for (int i=0; i<12; i++)
-        filename[i] = ((char*)(frame->esi))[i];
-      Process* p = Global::kernel->createProcess(filename);
+      Process* p = Global::kernel->createProcess(esi);
       rval = p->PID;
       asm("sti");
       break;
@@ -219,7 +219,7 @@ void syscall(frame_struct* frame) {
         
         rval = stdin->read(frame->ebx, edi);
       } else {
-        xnoe::Maybe<ReadWriter*> fh = Global::kernel->FH->get(esi);
+        xnoe::Maybe<ReadWriter*> fh = Global::FH->get(esi);
         if (!fh.is_ok()) {
           rval = 0;
           break;
@@ -239,7 +239,7 @@ void syscall(frame_struct* frame) {
         
         rval = stdout->write(frame->ebx, edi);
       } else {
-        xnoe::Maybe<ReadWriter*> fh = Global::kernel->FH->get(esi);
+        xnoe::Maybe<ReadWriter*> fh = Global::FH->get(esi);
         if (!fh.is_ok()) {
           rval = 0;
           break;
@@ -283,6 +283,19 @@ void syscall(frame_struct* frame) {
         rval = Global::kernel->mapFH(buffer);
       }
       break;
+    }
+
+    case 15: {
+      ReadWriter* file = new FATFileReadWriter(0, esi);
+      rval = Global::kernel->mapFH(file);
+    }
+
+    case 16: {
+      xnoe::Maybe<ReadWriter*> f = Global::FH->get(esi);
+      if (f.is_ok()) {
+        delete f.get();
+        Global::kernel->unmapFH(esi);
+      }
     }
 
     default:

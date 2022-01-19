@@ -168,15 +168,16 @@ int main() {
   for (int i=0; i<80;i++)
     write(1, 0, &plus);
 
-  char* hello_bin = "HELLO   BIN";
-  uint32_t p1 = fork(hello_bin);
-  uint32_t p2 = fork(hello_bin);
-
+  uint32_t program = fopen("hello.bin");
+  uint32_t p1 = fork(program);
   uint32_t p1out = bindStdout(p1);
   uint32_t p1in = bindStdin(p1);
-
+  fclose(program);
+  program = fopen("hello.bin");
+  uint32_t p2 = fork(program);
   uint32_t p2out = bindStdout(p2);
   uint32_t p2in = bindStdin(p2);
+  fclose(program);
 
   procbuffer b1 = {
     .buffer = localalloc(21 * 38),

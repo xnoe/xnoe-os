@@ -15,8 +15,9 @@ public:
   void giveReadPerm(uint32_t PID);
   void giveWritePerm(uint32_t PID);
 
-  virtual int read(uint32_t count, uint8_t* buffer);
-  virtual int write(uint32_t count, uint8_t* buffer);
+  virtual uint32_t read(uint32_t count, uint8_t* buffer);
+  virtual uint32_t write(uint32_t count, uint8_t* buffer);
+  virtual uint32_t size();
   uint32_t getOwner();
   bool canRead(uint32_t PID);
   bool canWrite(uint32_t PID);

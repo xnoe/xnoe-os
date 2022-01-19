@@ -55,7 +55,7 @@ namespace xnoe {
       return xnoe::Maybe<value>();
     }
 
-    void remove(key k, value v) {
+    void remove(key k) {
       xnoe::linkedlist<xnoe::tuple<key, value>>* list = &table[xnoe::hash<key>(k) % 4096];
       xnoe::linkedlistelem<xnoe::tuple<key, value>>* current = list->start;
       if (current) {

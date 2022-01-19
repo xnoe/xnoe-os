@@ -33,7 +33,7 @@ Process::Process(uint32_t PID)
   this->kernelStackPtr = (new uint8_t[0x1000]) + 0x1000;
 }
 
-Process::Process(uint32_t PID, PageDirectory* inherit, uint32_t inheritBase, char* filename)
+Process::Process(uint32_t PID, PageDirectory* inherit, uint32_t inheritBase, uint32_t fh)
 : Allocator(new PageDirectory, new PageMap, (uint32_t)0, 3) {
   this->stdout = 0;
   this->stdin = 0;
@@ -47,45 +47,51 @@ Process::Process(uint32_t PID, PageDirectory* inherit, uint32_t inheritBase, cha
   for (int index = inheritBase >> 22; index < 1024; index++)
     this->PD->page_directory[index] = inherit->page_directory[index];
 
-  uint8_t* program_data = this->allocate(file_size(filename) + 12) + 12;
+  xnoe::Maybe<ReadWriter*> file = Global::FH->get(fh);
+  if (file.is_ok()) {
+    ReadWriter* filereader = file.get();
+    uint32_t filesize = filereader->size();
+    uint8_t* program_data = this->allocate(filesize + 12) + 12;
 
-  this->stack = this->allocate(0x8000);
-  this->kernelStackPtr = (new uint8_t[0x1000]) + 0xffc;
-  this->kernelStackPtrDefault = this->kernelStackPtr;
+    this->stack = this->allocate(0x8000);
+    this->kernelStackPtr = (new uint8_t[0x1000]) + 0xffc;
+    this->kernelStackPtrDefault = this->kernelStackPtr;
 
-  uint32_t pCR3;
-  asm ("mov %%cr3, %0" : "=a" (pCR3) :);
-  this->PD->select();
+    uint32_t pCR3;
+    asm ("mov %%cr3, %0" : "=a" (pCR3) :);
+    this->PD->select();
 
-  // We also need to initialise ESP and the stack
-  uint32_t* stack32 = ((uint32_t)this->kernelStackPtr);
-  *(--stack32) = 0x23; // SS
-  *(--stack32) = ((uint32_t)this->stack + 0x8000); // ESP
-  *(--stack32) = 0x200; // EFLAGS
-  *(--stack32) = 27; // CS
-  *(--stack32) = (uint32_t)program_data; // EIP
-  *(--stack32) = ((uint32_t)this->stack + 0x8000); // EBP
+    // We also need to initialise ESP and the stack
+    uint32_t* stack32 = ((uint32_t)this->kernelStackPtr);
+    *(--stack32) = 0x23; // SS
+    *(--stack32) = ((uint32_t)this->stack + 0x8000); // ESP
+    *(--stack32) = 0x200; // EFLAGS
+    *(--stack32) = 27; // CS
+    *(--stack32) = (uint32_t)program_data; // EIP
+    *(--stack32) = ((uint32_t)this->stack + 0x8000); // EBP
 
-  uint32_t rEBP = stack32;
+    uint32_t rEBP = stack32;
 
-  //stack32--;
-  *(--stack32) = 0;    // EAX
-  *(--stack32) = 0;    // ECX
-  *(--stack32) = 0;    // EDX
-  *(--stack32) = 0;    // EBX
-  *(--stack32) = 0;    // ESP
-  *(--stack32) = rEBP; // EBP
-  *(--stack32) = 0;    // ESI
-  *(--stack32) = 0;    // EDI
-  stack32--;
-  *(--stack32) = &catchall_return; // cachall_return
-  stack32--;
+    //stack32--;
+    *(--stack32) = 0;    // EAX
+    *(--stack32) = 0;    // ECX
+    *(--stack32) = 0;    // EDX
+    *(--stack32) = 0;    // EBX
+    *(--stack32) = 0;    // ESP
+    *(--stack32) = rEBP; // EBP
+    *(--stack32) = 0;    // ESI
+    *(--stack32) = 0;    // EDI
+    stack32--;
+    *(--stack32) = &catchall_return; // cachall_return
+    stack32--;
 
-  this->kernelStackPtr = stack32;
+    this->kernelStackPtr = stack32;
 
-  load_file(filename, program_data);
+    //load_file(filename, program_data);
+    filereader->read(filesize, program_data);
 
-  asm ("mov %0, %%cr3" : : "r" (pCR3));
+    asm ("mov %0, %%cr3" : : "r" (pCR3));
+  }
 }
 
 Process::~Process() {
