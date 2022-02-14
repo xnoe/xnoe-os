@@ -49,6 +49,14 @@ void writeToBuf(char c, procbuffer* buf) {
   }
 }
 
+void clearBuf(procbuffer* buf) {
+  for (int i=0; i<21*38;i++) {
+    buf->buffer[i] = ' ';
+  }
+  buf->x = 0;
+  buf->y = 0;
+}
+
 void writeStrToBuf(char* c, procbuffer* b) {
   char* s = c;
   while(*s)
@@ -203,10 +211,12 @@ int main() {
 
   while (1) {
     char c;
-    if (read(1, b1.stdout, &c))
-      writeToBuf(c, &b1);
-    if (read(1, b2.stdout, &c))
-      writeToBuf(c, &b2);
+    if (b1.process)
+      if (read(1, b1.stdout, &c))
+        writeToBuf(c, &b1);
+    if (b2.process)
+      if (read(1, b2.stdout, &c))
+        writeToBuf(c, &b2);
     if (read(1, 1, &c)) {
       if (c == ':') {
         char buf[32] = {0};
@@ -231,9 +241,32 @@ int main() {
           writeStrToBuf(":load <filename>\n", selectedBuf);
           writeStrToBuf("  Loads and executes the program <filename>\n", selectedBuf);
           writeStrToBuf("--------\n", selectedBuf);
+        } else if (strcmpcnt(4, buf, "kill")) {
+          if (selectedBuf->process) {
+            kill(selectedBuf->process);
+            clearBuf(selectedBuf);
+            selectedBuf->process = 0;
+            selectedBuf->stdin = 0;
+            selectedBuf->stdout = 0;
+            if (selectedBuf == &b1) {
+              selectedBuf = &b2;
+            } else {
+              selectedBuf = &b1;
+            }
+          }
+        } else if (strcmpcnt(4, buf, "load")) {
+          if (!selectedBuf->process) {
+            char* potFn = buf+5;
+            uint32_t fh = fopen(potFn);
+            selectedBuf->process = fork(fh);
+            selectedBuf->stdout = bindStdout(selectedBuf->process);
+            selectedBuf->stdin = bindStdin(selectedBuf->process);
+            fclose(fh);
+          }
         }
       } else {
-        write(1, selectedBuf->stdin, &c);
+        if (selectedBuf->process)
+          write(1, selectedBuf->stdin, &c);
       }
     }
     

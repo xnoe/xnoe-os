@@ -167,6 +167,8 @@ void syscall(frame_struct* frame) {
   // 15: fopen :: char* path esi -> int filehandler // Returns a filehandler to the file.
   // 16: fclose :: int filehandler esi -> void // Closes a file handler.
 
+  // 17: kill :: int PID esi -> void // Destroys a process.
+
   // File handlers:
   // 0: Stdout
   // 1: Stdin
@@ -288,6 +290,7 @@ void syscall(frame_struct* frame) {
     case 15: {
       ReadWriter* file = new FATFileReadWriter(0, esi);
       rval = Global::kernel->mapFH(file);
+      break;
     }
 
     case 16: {
@@ -296,6 +299,18 @@ void syscall(frame_struct* frame) {
         delete f.get();
         Global::kernel->unmapFH(esi);
       }
+      break;
+    }
+
+    case 17: {
+      asm("cli");
+      xnoe::Maybe<Process*> p = Global::kernel->pid_map->get(esi);
+      if (p.is_ok()) {
+        Process* proc = p.get();
+        Global::kernel->destroyProcess(proc);
+      }
+      asm("sti");
+      break;
     }
 
     default:

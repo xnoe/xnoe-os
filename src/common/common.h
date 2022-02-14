@@ -21,6 +21,7 @@ void bindToKeyboard();
 
 int fopen(char* filename);
 void fclose(uint32_t fh);
+void kill(uint32_t pid);
 
 int int_to_decimal(unsigned int number, char* string_buffer);
 int int_to_hex(unsigned int number, char* string_buffer);

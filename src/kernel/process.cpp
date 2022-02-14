@@ -95,16 +95,20 @@ Process::Process(uint32_t PID, PageDirectory* inherit, uint32_t inheritBase, uin
 }
 
 Process::~Process() {
+  uint32_t pCR3;
+  asm ("mov %%cr3, %0" : "=a" (pCR3) :);
+  this->PD->select();
   xnoe::linkedlistelem<AllocTracker>* next = allocations.start;
   while (next) {
     xnoe::linkedlistelem<AllocTracker>* active = next;
     next = next->next;
 
-    printf("Deleted %x\n", active->elem.page_base);
+    //printf("Deleted %x\n", active->elem.page_base);
 
     this->deallocate(active->elem.page_base+1);
   }
   this->deallocate(stack);
+  asm ("mov %0, %%cr3" : : "r" (pCR3));
   delete kernelStackPtr;
 }
 

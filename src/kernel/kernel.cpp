@@ -39,6 +39,8 @@ Process* Kernel::createProcess(uint32_t fh, ReadWriter* stdout) {
 }
 
 void Kernel::destroyProcess(Process* p) {
+  if (Global::currentProc == p)
+    Global::currentProcValid = false;
   this->processes.remove(p);
   this->pid_map->remove(p->PID);
   delete p;
