@@ -39,7 +39,7 @@ run: disk.img
 debug: disk.img
 	qemu-system-i386 -s -S -no-reboot -no-shutdown disk.img & gdb --command=gdbscript
 
-disk.img: clean prepare build/boot/boot.bin build/boot_stage2/boot.bin $(DISK_IMG_FILES) build/world/world.bin
+disk.img: prepare build/boot/boot.bin build/boot_stage2/boot.bin $(DISK_IMG_FILES) build/world/world.bin
 	dd if=/dev/zero of=disk.img count=43 bs=100k
 	dd if=build/boot/boot.bin of=disk.img conv=notrunc
 	dd obs=512 seek=1 if=build/boot_stage2/boot.bin of=disk.img conv=notrunc

@@ -28,7 +28,7 @@ uint32_t CircularRWBuffer::read(uint32_t count, uint8_t* buffer) {
   int i=0;
   while (i < count) {
     if (this->readPtr == this->writePtr)
-      return 0;
+      return i;
     buffer[i] = this->buffer[this->readPtr];
 
     this->readPtr++;

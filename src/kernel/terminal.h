@@ -7,8 +7,15 @@
 #include "types.h"
 #include "strings.h"
 #include "io.h"
+#include "font.h"
 
 #include "stdio/readwriter.h"
+
+struct frame_struct;
+
+namespace Timer {
+  void register_event(uint32_t milliseconds, void(*function)(frame_struct*, void*), void* auxiliary);
+}
 
 class Terminal: public ReadWriter {
 private:
@@ -53,13 +60,31 @@ public:
 
 class TextModeTerminal : public Terminal {
 private:
-   void update() override;
-   void update_cur() override;
-   void putchar_internal(uint32_t ptr, uint8_t c, uint8_t edata=0x07) override;
+  void update() override;
+  void update_cur() override;
+  void putchar_internal(uint32_t ptr, uint8_t c, uint8_t edata=0x07) override;
 
-   uint16_t* text_mode_pointer;
+  uint16_t* text_mode_pointer;
 public:
   TextModeTerminal(uint16_t* text_mode_pointer);
 };
 
+
+class VGAModeTerminal : public Terminal {
+private:
+  void update() override;
+  void update_cur() override;
+  void putchar_internal(uint32_t ptr, uint8_t c, uint8_t edata=0x07) override;
+
+  void put_pixel(uint32_t x, uint32_t y, uint8_t color);
+  void put_pixels_byte(uint32_t x, uint32_t y, uint8_t color, uint8_t pixel_byte);
+
+  static void bufferToVRAM(frame_struct* frame, VGAModeTerminal* terminal);
+   
+public:
+  uint8_t* vga_pointer;
+  uint8_t* planes[4];
+
+  VGAModeTerminal(uint8_t* vga_pointer);
+};
 #endif

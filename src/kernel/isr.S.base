@@ -5,8 +5,17 @@ global isrs
 global catchall_return
 
 catchall: ; At this point the gate number has been pushed to the stack
-  pushad ; Pushed 32 bytes
-  mov eax, [esp+32]
+  pushad
+
+  push esp
+  sub esp, 4
+  push eax
+  mov eax, cr3
+  mov [esp+4], eax
+  pop eax
+
+  ; Pushed 40 bytes
+  mov eax, [esp+40]
   mov ebx, gates
   mov eax, [ebx+4*eax]
   push esp
@@ -20,7 +29,15 @@ catchall_return:
   call outb
   add esp, 8
 
+  push eax
+  mov eax, [esp+4]
+  mov cr3, eax
+  pop eax
+  add esp, 4
+  pop esp
+
   popad
+
   mov esp, ebp
   pop ebp
   iret

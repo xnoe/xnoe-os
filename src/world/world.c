@@ -11,12 +11,12 @@ typedef struct {
 } procbuffer;
 
 void scrollBuffer(char* buf) {
-  for (int y=0; y<21; y++)
-    for (int x=0; x<38; x++)
-      if (y != 20)
-        buf[y*38+x] = buf[(y+1)*38+x];
+  for (int y=0; y<56; y++)
+    for (int x=0; x<43; x++)
+      if (y != 55)
+        buf[y*43+x] = buf[(y+1)*43+x];
       else
-        buf[y*38+x] = ' ';
+        buf[y*43+x] = ' ';
 }
 
 void writeToBuf(char c, procbuffer* buf) {
@@ -30,27 +30,33 @@ void writeToBuf(char c, procbuffer* buf) {
       if (buf->x > 0)
         buf->x--;
       else if (buf->y > 0) {
-        buf->x = 37;
+        buf->x = 42;
         buf->y--;
       }
-      buf->buffer[buf->y*38+buf->x] = ' ';
+      buf->buffer[buf->y*43+buf->x] = ' ';
       break;
 
     default:
-      buf->buffer[buf->y*38+buf->x++] = c;
+      buf->buffer[buf->y*43+buf->x++] = c;
   }
-  if (buf->x == 38) {
+  if (buf->x == 43) {
     buf->x = 0;
     buf->y++;
   }
-  if (buf->y == 21) {
+  if (buf->y == 56) {
     buf->y--;
     scrollBuffer(buf->buffer);
   }
 }
 
+void writeCountToBuf(int count, char* c, procbuffer* buf) {
+  while (count--) {
+    writeToBuf(*(c++), buf);
+  }
+}
+
 void clearBuf(procbuffer* buf) {
-  for (int i=0; i<21*38;i++) {
+  for (int i=0; i<56*43;i++) {
     buf->buffer[i] = ' ';
   }
   buf->x = 0;
@@ -79,9 +85,9 @@ void displayBuf(procbuffer* b, int dx, int dy) {
       pset[5]++;
     }
   }
-  for (int i=0; i<21; i++) {
+  for (int i=0; i<56; i++) {
     print(pset);
-    write(38, 0, b->buffer+(38*i));
+    write(43, 0, b->buffer+(43*i));
     pset[3]++;
     if (pset[3] == 0x3a) {
       pset[3] = 0x30;
@@ -164,16 +170,16 @@ int main() {
     write(1, 0, &space);
   print("\x1b[1;1H");
 
-  char* mid =    "+                                      ++                                      +";
-  char* bottom = "+                                                                              +";
-  for (int i=0; i<80;i++)
+  char* mid =    "+                                           ++                                           +";
+  char* bottom = "+                                                                                        +";
+  for (int i=0; i<90;i++)
     write(1, 0, &plus);
-  for (int i=0; i<21;i++)
-    write(80, 0, mid);
-  for (int i=0; i<80;i++)
+  for (int i=0; i<56;i++)
+    write(90, 0, mid);
+  for (int i=0; i<90;i++)
     write(1, 0, &plus);
-  write(80, 0, bottom);
-  for (int i=0; i<80;i++)
+  write(90, 0, bottom);
+  for (int i=0; i<90;i++)
     write(1, 0, &plus);
 
   uint32_t program = fopen("hello.bin");
@@ -188,7 +194,7 @@ int main() {
   fclose(program);
 
   procbuffer b1 = {
-    .buffer = localalloc(21 * 38),
+    .buffer = localalloc(56 * 43),
     .x = 0,
     .y = 0,
     .process = p1,
@@ -197,7 +203,7 @@ int main() {
   };
 
   procbuffer b2 = {
-    .buffer = localalloc(21 * 38),
+    .buffer = localalloc(56 * 43),
     .x = 0,
     .y = 0,
     .process = p2,
@@ -207,22 +213,23 @@ int main() {
 
   procbuffer* selectedBuf = &b1;
 
-  writeStrToBuf("XoSH (Xnoe SHell) v0.0.1\nPress : to use commands.\n :help for help.\n", &b1);
+  writeStrToBuf("XoSH (XOS SHell) v0.0.1\nPress : to use commands.\n :help for help.\n", &b1);
 
   while (1) {
-    char c;
+    char c[128];
+    int succ = 0;
     if (b1.process)
-      if (read(1, b1.stdout, &c))
-        writeToBuf(c, &b1);
+      if (succ = read(128, b1.stdout, c))
+        writeCountToBuf(succ, c, &b1);
     if (b2.process)
-      if (read(1, b2.stdout, &c))
-        writeToBuf(c, &b2);
-    if (read(1, 1, &c)) {
-      if (c == ':') {
+      if (succ = read(128, b2.stdout, c))
+        writeCountToBuf(succ, c, &b2);
+    if (read(1, 1, c)) {
+      if (c[0] == ':') {
         char buf[32] = {0};
-        print("\x1b[24;2H");
+        print("\x1b[59;2H");
         print(":                                ");
-        print("\x1b[24;3H");
+        print("\x1b[59;3H");
         readline(32, buf);
         if (strcmpcnt(6, buf, "switch")) {
           if (selectedBuf == &b1) {
@@ -266,11 +273,11 @@ int main() {
         }
       } else {
         if (selectedBuf->process)
-          write(1, selectedBuf->stdin, &c);
+          write(1, selectedBuf->stdin, c);
       }
     }
     
     displayBuf(&b1, 2, 2);
-    displayBuf(&b2, 42, 2);
+    displayBuf(&b2, 47, 2);
   }
 }

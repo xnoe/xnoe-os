@@ -31,7 +31,7 @@ int main() {
   kernel.init_kernel();
   init_atapio();
 
-  TextModeTerminal* term = new TextModeTerminal(0xc0501000);
+  VGAModeTerminal* term = new VGAModeTerminal(0xc07a0000);
 
   kernel.terminal = term;
 

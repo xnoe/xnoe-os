@@ -72,7 +72,6 @@ Process::Process(uint32_t PID, PageDirectory* inherit, uint32_t inheritBase, uin
 
     uint32_t rEBP = stack32;
 
-    //stack32--;
     *(--stack32) = 0;    // EAX
     *(--stack32) = 0;    // ECX
     *(--stack32) = 0;    // EDX
@@ -81,13 +80,9 @@ Process::Process(uint32_t PID, PageDirectory* inherit, uint32_t inheritBase, uin
     *(--stack32) = rEBP; // EBP
     *(--stack32) = 0;    // ESI
     *(--stack32) = 0;    // EDI
-    stack32--;
-    *(--stack32) = &catchall_return; // cachall_return
-    stack32--;
 
     this->kernelStackPtr = stack32;
 
-    //load_file(filename, program_data);
     filereader->read(filesize, program_data);
 
     asm ("mov %0, %%cr3" : : "r" (pCR3));

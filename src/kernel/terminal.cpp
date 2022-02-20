@@ -183,13 +183,6 @@ void Terminal::printf(const char* string, ...) {
 }
 
 uint32_t Terminal::write(uint32_t count, uint8_t* string) {
-  /*char* buf = new char[count+1];
-  for (int i=0;i<count;i++) {
-    buf[i] = buffer[i];
-  }
-  buf[count] = 0x00;
-  printf(buf);
-  delete buf;*/
   int index = 0;
   char current;
 
@@ -335,4 +328,155 @@ void TextModeTerminal::putchar_internal(uint32_t ptr, uint8_t c, uint8_t edata) 
 
 TextModeTerminal::TextModeTerminal(uint16_t* text_mode_pointer): Terminal(80, 25, 1) {
   this->text_mode_pointer = text_mode_pointer;
+}
+
+void VGAModeTerminal::update() {
+  for (int y = 0; y < height; y++) {
+    for (int x = 0; x < width; x++) {
+      putchar_internal(y * width + x, (uint8_t)(current_page_pointer[y * width + x]), 0);
+    }
+  }
+}
+
+void VGAModeTerminal::update_cur() {
+  // Todo: Implement cursor for VGAModeTerminal
+}
+
+void VGAModeTerminal::putchar_internal(uint32_t ptr, uint8_t c, uint8_t edata) {
+  uint32_t col = ptr % width;
+  uint32_t row = ptr / width;
+
+  uint32_t sx = col * 8;
+  uint32_t sy = row * 8;
+
+  if (c>127)
+    return;
+  uint8_t* char_data = font[c];
+
+  for (int y=0; y<8; y++) {
+    //for (int x=0; x<8; x++) {
+      put_pixels_byte(sx, sy+y, 15, char_data[y]);
+    //}
+  }
+}
+
+void VGAModeTerminal::put_pixels_byte(uint32_t x, uint32_t y, uint8_t color, uint8_t pixel_byte) {
+  uint32_t pixel = y * 720 + x;
+  uint32_t pixelindex = pixel / 8;
+
+  uint8_t trbyte = 0;
+  for (int i=0; i<8; i++) {
+    trbyte <<= 1;
+    trbyte += (pixel_byte>>i)&1;
+  }
+  
+  for (int i=0; i<4; i++) {
+    if (color & (1<<i))
+      this->planes[i][pixelindex] = trbyte;
+    else
+      this->planes[i][pixelindex] = 0;
+  }
+}
+
+void VGAModeTerminal::put_pixel(uint32_t x, uint32_t y, uint8_t color) {
+  // For any pixel we need to write 1 bit to planes 0, 1, 2, and 3
+
+  uint32_t pixel = y * 720 + x;
+  uint32_t pixelindex = pixel / 8;
+  uint32_t pixelbitindex = pixel % 8;
+  
+  for (int i=0; i<4; i++) {
+    if (color & (1<<i))
+      this->planes[i][pixelindex] |= (1<<(7-pixelbitindex));
+    else
+      this->planes[i][pixelindex] &= ~(1<<(7-pixelbitindex));
+  }
+}
+
+static void VGAModeTerminal::bufferToVRAM(frame_struct* frame, VGAModeTerminal* terminal) {
+  uint32_t count4 = (720 * 480) / 8 / 4;
+  for (int i=0; i<4; i++) {
+    outb(0x3c4, 2);
+    outb(0x3c5, 1<<i);
+
+    for (int c=0; c<count4; c++) {
+      ((uint32_t*)terminal->vga_pointer)[c] = ((uint32_t*)terminal->planes[i])[c];
+    }
+  }
+}
+
+VGAModeTerminal::VGAModeTerminal(uint8_t* vga_pointer): Terminal(90, 60, 1) {
+  this->vga_pointer = vga_pointer;
+
+  for (int i=0; i<4; i++) {
+    this->planes[i] = new uint8_t[720 * 480 / 8];
+  }
+
+  unsigned char g_720x480x16[] =
+  {
+    /* MISC */
+      0xE7,
+    /* SEQ */
+      0x03, 0x01, 0x08, 0x00, 0x06,
+    /* CRTC */
+      0x6B, 0x59, 0x5A, 0x82, 0x60, 0x8D, 0x0B, 0x3E,
+      0x00, 0x40, 0x06, 0x07, 0x00, 0x00, 0x00, 0x00,
+      0xEA, 0x0C, 0xDF, 0x2D, 0x08, 0xE8, 0x05, 0xE3,
+      0xFF,
+    /* GC */
+      0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x05, 0x0F,
+      0xFF,
+    /* AC */
+      0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+      0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
+      0x01, 0x00, 0x0F, 0x00, 0x00,
+  };
+
+  uint8_t* creg = g_720x480x16;
+
+  outb(0x3c2, *(creg++));
+  for (int i=0; i<5; i++) {
+    outb(0x3c4, i);
+    outb(0x3c5, *(creg++));
+  }
+  outb(0x3d4, 0x3);
+  outb(0x3d5, inb(0x3d5) | 0x80);
+  outb(0x3d4, 0x11);
+  outb(0x3d5, inb(0x3d5) & ~0x80);
+
+  creg[0x03] = creg[0x03] | 0x80;
+  creg[0x11] = creg[0x11] & ~0x80;
+
+  for (int i=0; i<25; i++) {
+    outb(0x3d4, i);
+    outb(0x3d5, *(creg++));
+  }
+
+  for (int i=0; i<9; i++) {
+    outb(0x3ce, i);
+    outb(0x3cf, *(creg++));
+  }
+
+  for (int i=0; i<21; i++) {
+    inb(0x3da);
+    outb(0x3c0, i);
+    outb(0x3c1, *(creg++));
+  }
+
+  inb(0x3da);
+  outb(0x3c0, 0x20);
+
+  uint32_t width4 = 480 / 8 / 4;
+  uint32_t height4 = 720 / 8 / 4;
+  uint32_t total4 = width4 * height4;
+
+  for (int plane=0; plane<4; plane++) {
+    outb(0x3c4, 2);
+    outb(0x3c5, 1<<plane);
+    for (int i=0; i<total4; i++) {
+      ((uint32_t*)this->vga_pointer)[i] = 0;
+    }
+  }
+
+  Timer::register_event(16, &VGAModeTerminal::bufferToVRAM, this);
 }

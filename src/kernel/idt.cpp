@@ -91,7 +91,7 @@ void context_switch(frame_struct* frame) {
   }
 
   if (Global::currentProcValid)
-    asm ("mov %%esp, %0" : "=a" (Global::currentProc->kernelStackPtr):);
+    Global::currentProc->kernelStackPtr = frame->new_esp;
   
   // This cursed bit of code first determines if the processes list is longer than 1 and if it is
   // - Determines if it has 2 or more elements
@@ -123,25 +123,35 @@ void context_switch(frame_struct* frame) {
   Global::currentProc = processes->start->elem;
 
   // Select the next processes page directory
-  asm volatile ("mov %0, %%cr3" : : "r" (Global::currentProc->PD->phys_addr)); 
+  frame->new_cr3 = Global::currentProc->PD->phys_addr;
   // Restore kernelStackPtr of the new process.
-  asm volatile ("mov %0, %%esp" : : "m" (Global::currentProc->kernelStackPtr));
-
-  // At this point interrupts are disabled till iret so we can safely set
-  // Global::tss->esp0 to the new Process's kernelStackPtrDefault
+  frame->new_esp = Global::currentProc->kernelStackPtr;
 
   Global::tss->esp0 = Global::currentProc->kernelStackPtrDefault;
 
   // Set the current proc to valid
   Global::currentProcValid = true;
+}
 
-  if (Global::currentProc->firstRun) {
-    Global::currentProc->firstRun = false;
-    asm("add $4, %esp");
-    asm("ret");
-  } else {
-    asm("add $28, %esp");
-    asm("ret");
+namespace Timer {
+  using TimedEvent = xnoe::tuple<uint32_t, uint32_t, void(*)(frame_struct*, void*), void*>;
+  xnoe::linkedlist<TimedEvent> timed_events;
+  void tick(frame_struct* frame) {
+    xnoe::linkedlistelem<TimedEvent>* current = timed_events.start;
+    while (current) {
+      TimedEvent t = current->elem;
+      uint32_t count = xnoe::get<0>(t);
+      if (--count == 0) {
+        xnoe::get<2>(t)(frame, xnoe::get<3>(t));
+        count = xnoe::get<1>(t);
+      }
+      current->elem = TimedEvent(count, xnoe::get<1>(t), xnoe::get<2>(t), xnoe::get<3>(t));
+      current = current->next;
+    }
+  }
+
+  void register_event(uint32_t milliseconds, void(*function)(frame_struct*, void*), void* auxiliary) {
+    timed_events.append(TimedEvent(milliseconds, milliseconds, function, auxiliary));
   }
 }
 
@@ -330,11 +340,12 @@ void init_idt() {
   for (int i=0; i<256; i++)
     gates[i] = &ignore_interrupt;
   
-  gates[32] = &context_switch;
+  gates[32] = &Timer::tick;
   gates[0] = &handle_fault;
   gates[5] = &handle_fault;
   gates[6] = &handle_fault;
   gates[7] = &handle_fault;
+  gates[8] = &handle_fault;
   gates[9] = &handle_fault;
   gates[10] = &handle_fault;
   gates[11] = &handle_fault;
@@ -363,6 +374,14 @@ void init_idt() {
   outb(0xA1, 0x01);
   outb(0x21, 0x00);
   outb(0xA1, 0x00);
+
+  // Program the PIT
+  uint16_t counter = 1193;
+  uint8_t* _counter = (uint8_t*)&counter;
+  outb(0x40, _counter[0]);
+  outb(0x40, _counter[1]);
+
+  Timer::register_event(30, &context_switch, 0);
 }
 
 void enable_idt() {

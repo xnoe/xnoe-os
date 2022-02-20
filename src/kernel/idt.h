@@ -9,6 +9,9 @@
 #include "stdio/circularrwbuffer.h"
 
 struct __attribute__((packed)) frame_struct {
+  uint32_t new_cr3;
+  uint32_t new_esp;
+
   uint32_t edi;
   uint32_t esi;
   uint32_t ebp;
