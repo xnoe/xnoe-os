@@ -27,9 +27,19 @@ namespace xnoe {
       while (start) {
         if (start->elem == t)
           return true;
+        //current = current->next;
       }
 
       return false;
+    }
+
+    void destroy() {
+      xnoe::linkedlistelem<T>* current = this->start;
+      while (current) {
+        xnoe::linkedlistelem<T>* c = current;
+        current = current->next;
+        delete c;
+      }
     }
 
     void append(T t) {

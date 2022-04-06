@@ -298,8 +298,9 @@ void syscall(frame_struct* frame) {
     }
 
     case 15: {
-      ReadWriter* file = new FATFileReadWriter(0, esi);
-      rval = Global::kernel->mapFH(file);
+      ReadWriter* file = Global::kernel->rootfs->open(createPathFromString(esi));
+      if (file)
+        rval = Global::kernel->mapFH(file);
       break;
     }
 

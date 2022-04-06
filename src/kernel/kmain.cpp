@@ -4,7 +4,7 @@
 #include "idt.h"
 #include "keyboard.h"
 #include "strings.h"
-#include "atapio.h"
+#include "ata.h"
 #include "gdt.h"
 #include "paging.h"
 #include "allocate.h"
@@ -14,6 +14,9 @@
 #include "datatypes/hashtable.h"
 #include "terminal.h"
 #include "kernel.h"
+#include "filesystem/fstree.h"
+#include "filesystem/fat16.h"
+#include "filesystem/devfs.h"
 
 int main() {
   init_gdt();
@@ -29,7 +32,6 @@ int main() {
 
   Kernel kernel = Kernel(&kernel_pd, &phys_pm, &virt_pm, 0xc0000000, 0xc1006000);
   kernel.init_kernel();
-  init_atapio();
 
   VGAModeTerminal* term = new VGAModeTerminal(0xc07a0000);
 
@@ -44,14 +46,30 @@ int main() {
   
   term->printf("KERNEL OK!\n");
 
-  ReadWriter* worldbin = new FATFileReadWriter(0, "etc/world.bin");
+  ReadWriter* atareadwriter = new ATAReadWriter(0, 0);
+
+  uint8_t* buffer = new uint8_t[512];
+  for (int i=0;i<512;i++)
+    buffer[i]=0;
+  uint32_t size = atareadwriter->size();
+  atareadwriter->seek(268*512);
+  atareadwriter->read(512, buffer);
+
+  kernel.rootfs = new RootFSTree();
+  kernel.rootfs->mount(createPathFromString("/dev"), new DevFS());
+  kernel.rootfs->mount(createPathFromString("/"), new FAT16FS(kernel.rootfs->open(createPathFromString("/dev/ata"))));
+  ReadWriter* worldbin = kernel.rootfs->open(createPathFromString("/world.bin"));
   uint32_t fh = kernel.mapFH(worldbin);
 
   Process* p1 = kernel.createProcess(fh, term);
 
   init_keyboard();
-  
-  enable_idt();
+  if (worldbin) {
+    worldbin->seek(0);
+    worldbin->read(512, buffer);
+    worldbin->seek(0);
+    enable_idt();
+  }
 
   while (1) asm ("hlt");
 }

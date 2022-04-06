@@ -8,7 +8,7 @@
 #include "datatypes/maybe.h"
 #include "screenstuff.h"
 #include "global.h"
-#include "atapio.h"
+#include "ata.h"
 
 #include "stdio/readwriter.h"
 

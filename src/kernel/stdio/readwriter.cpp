@@ -14,6 +14,7 @@ void ReadWriter::giveWritePerm(uint32_t PID) {
 
 uint32_t ReadWriter::read(uint32_t count, uint8_t* buffer){}
 uint32_t ReadWriter::write(uint32_t count, uint8_t* buffer){}
+uint32_t ReadWriter::seek(uint32_t position){}
 uint32_t ReadWriter::size(){}
 
 bool ReadWriter::canRead(uint32_t PID) {

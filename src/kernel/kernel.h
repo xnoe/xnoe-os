@@ -5,6 +5,7 @@
 #include "datatypes/hashtable.h"
 #include "global.h"
 #include "terminal.h"
+#include "filesystem/fstree.h"
 
 class Kernel : public Process {
 private:
@@ -19,6 +20,8 @@ public:
 
   xnoe::linkedlist<Process*> processes;
   xnoe::linkedlist<Process*> KBListeners;
+
+  RootFSTree* rootfs;
 
   Kernel(PageDirectory* page_directory, PageMap* phys, PageMap* virt, uint32_t virt_alloc_base, uint32_t stack);
 

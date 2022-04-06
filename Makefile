@@ -1,67 +1,60 @@
-CFLAGS = -g -std=gnu11 -m32 -mgeneral-regs-only -nostdlib -fno-builtin -fno-exceptions -fno-leading-underscore -fno-pie -fno-stack-protector -Wno-pointer-to-int-cast
-CXXFLAGS = -g -m32 -fno-use-cxa-atexit -mgeneral-regs-only -nostdlib -fno-builtin -fno-rtti -fno-exceptions -fno-leading-underscore -fpermissive -fno-pie -fno-stack-protector -I.
+CFLAGS = -g -std=gnu11 -m32 -mgeneral-regs-only -nostdlib -fno-builtin -fno-exceptions -fno-leading-underscore -fno-pie -fno-stack-protector -Wno-pointer-to-int-cast -Isrc/
+CXXFLAGS = -g -m32 -fno-use-cxa-atexit -mgeneral-regs-only -nostdlib -fno-builtin -fno-rtti -fno-exceptions -fno-leading-underscore -fpermissive -fno-pie -fno-stack-protector -Isrc/
 LDFLAGS = 
 
-DISK_IMG_FILES = build/kernel/kernel.bin hello.txt alpha.txt \
-								 build/hello/hello.bin
+DISK_IMG_FILES = build/kernel/kernel.bin hello.txt alpha.txt
 
-KERNEL_CPP_SRCS = $(wildcard src/kernel/*.cpp) $(wildcard src/kernel/*/*.cpp) 
-KERNEL_ASM_SRCS = $(wildcard src/kernel/*.asm)
+KERNEL_CPP_SRCS = $(shell find src/kernel/ -name '*.cpp')
+KERNEL_ASM_SRCS = $(shell find src/kernel/ -name '*.asm')
 KERNEL_CPP_OBJS = $(patsubst src/%.cpp,build/%.o,$(KERNEL_CPP_SRCS))
 KERNEL_ASM_OBJS = $(patsubst src/%.asm,build/%.o,$(KERNEL_ASM_SRCS))
 
 KERNEL_OBJS = build/kernel/isr.o $(KERNEL_CPP_OBJS) $(KERNEL_ASM_OBJS)
 
-STAGE2_C_SRCS = $(wildcard src/boot_stage2/*.c)
+STAGE2_C_SRCS = $(wildcard src/bootstage2/*.c)
 STAGE2_C_OBJS = $(patsubst src/%.c,build/%.o,$(STAGE2_C_SRCS))
 
 STAGE2_OBJS = build/c_code_entry.o $(STAGE2_C_OBJS)
 
-PROGRAM_COMMON = build/program_code_entry.o build/common/common.o
+PROGRAM_COMMON = build/programs/entry.o build/common/common.o
 
-PROGRAM_C_SRCS = $(wildcard src/program/*.c)
-PROGRAM_C_OBJS = $(patsubst src/%.c,build/%.o,$(PROGRAM_C_SRCS))
-PROGRAM_OBJS = $(PROGRAM_COMMON) $(PROGRAM_C_OBJS)
+SRC_DIRS = $(shell find src/ -type d)
+BUILD_DIRS = $(subst src/,build/,$(SRC_DIRS))
 
-HELLO_C_SRCS = $(wildcard src/hello/*.c)
-HELLO_C_OBJS = $(patsubst src/%.c,build/%.o,$(HELLO_C_SRCS))
-HELLO_OBJS = $(PROGRAM_COMMON) $(HELLO_C_OBJS)
+PROGRAMS = $(shell find src/programs/* -type d)
+$(foreach program,$(PROGRAMS),\
+	$(eval $(program)_C_SRCS := $(shell find $(program) -name '*.c')) \
+	$(eval $(program)_CPP_SRCS := $(shell find $(program) -name '*.cpp')) \
+	$(eval $(program)_OBJS := $(patsubst src/%.c,build/%.o,$($(program)_C_SRCS)) \
+		$(patsubst src/%.cpp,build/%.o,$($(program)_CPP_SRCS))) \
+	$(eval DISK_IMG_FILES += $(subst src/,build/,$(program))/$(shell basename $(program).bin)) \
+)
 
-WORLD_C_SRCS = $(wildcard src/world/*.c)
-WORLD_C_OBJS = $(patsubst src/%.c,build/%.o,$(WORLD_C_SRCS))
-WORLD_OBJS = $(PROGRAM_COMMON) $(WORLD_C_OBJS)
-
-.PHONY: run debug prepare clean
+.PHONY: run debug prepare clean cleanbuild
 
 run: disk.img
 	qemu-system-i386 disk.img
 
-debug: disk.img
+cleanbuild: clean disk.img
+	qemu-system-i386 disk.img
+
+debug: clean disk.img
 	qemu-system-i386 -s -S -no-reboot -no-shutdown disk.img & gdb --command=gdbscript
 
-disk.img: prepare build/boot/boot.bin build/boot_stage2/boot.bin $(DISK_IMG_FILES) build/world/world.bin
+disk.img: prepare build/boot/boot.bin build/bootstage2/boot.bin $(DISK_IMG_FILES)
 	dd if=/dev/zero of=disk.img count=43 bs=100k
 	dd if=build/boot/boot.bin of=disk.img conv=notrunc
-	dd obs=512 seek=1 if=build/boot_stage2/boot.bin of=disk.img conv=notrunc
+	dd obs=512 seek=1 if=build/bootstage2/boot.bin of=disk.img conv=notrunc
 	mount disk.img img.d
 	mkdir img.d/etc/
 	cp $(DISK_IMG_FILES) img.d/
-	cp build/world/world.bin img.d/etc/world.bin
 	sleep 0.1
 	umount img.d
 	chmod 777 disk.img
 
 prepare:
 	mkdir -p img.d
-	mkdir -p build/boot
-	mkdir -p build/boot_stage2
-	mkdir -p build/kernel
-	mkdir -p build/kernel/datatypes
-	mkdir -p build/kernel/stdio
-	mkdir -p build/program
-	mkdir -p build/hello
-	mkdir -p build/world
-	mkdir -p build/common
+	mkdir -p $(BUILD_DIRS)
 	mountpoint img.d | grep not || umount img.d
 
 clean:
@@ -71,10 +64,10 @@ build/boot/boot.bin: src/boot/boot.asm
 	nasm $< -o $@
 
 # Boot Stage 2
-build/boot_stage2/boot.bin: src/boot_stage2/boot_stage2.ld $(STAGE2_OBJS)
+build/bootstage2/boot.bin: src/bootstage2/bootstage2.ld $(STAGE2_OBJS)
 	ld $(LDFLAGS) -T $< $(STAGE2_OBJS)
 
-build/boot_stage2/%.o: src/boot_stage2/%.c
+build/bootstage2/%.o: src/bootstage2/%.c
 	gcc $(CFLAGS) -o $@ -c $<
 
 # Kernel
@@ -101,12 +94,6 @@ src/kernel/isr.S: src/kernel/isr.S.base src/kernel/gen_isr_asm.sh
 
 # Program
 
-build/program/program.bin: src/program/program.ld $(PROGRAM_OBJS)
-	echo $(PROGRAM_OBJS)
-	ld $(LDFLAGS) -T $< $(PROGRAM_OBJS)
-
-build/hello/hello.bin: src/hello/hello.ld $(HELLO_OBJS)
-	ld $(LDFLAGS) -T $< $(HELLO_OBJS)
-
-build/world/world.bin: src/world/world.ld $(WORLD_OBJS)
-	ld $(LDFLAGS) -T $< $(WORLD_OBJS)
+.SECONDEXPANSION:
+build/programs/%.bin: src/programs/userspace.ld build/programs/entry.o $$(src/programs/$$(basename $$(notdir $$*))_OBJS) $(PROGRAM_COMMON)
+	ld -o $@ -T $^

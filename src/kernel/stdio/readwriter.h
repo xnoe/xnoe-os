@@ -18,6 +18,7 @@ public:
   virtual uint32_t read(uint32_t count, uint8_t* buffer);
   virtual uint32_t write(uint32_t count, uint8_t* buffer);
   virtual uint32_t size();
+  virtual uint32_t seek(uint32_t position);
   uint32_t getOwner();
   bool canRead(uint32_t PID);
   bool canWrite(uint32_t PID);
