@@ -1,63 +1,30 @@
 #include "common.h"
 
+#define syscall_hdlr_0(a, b, c) \
+  a b() { \
+    asm volatile("mov $" c ", %%eax; int $0x80" : : :); \
+  }
+#define syscall_hdlr_1(a, b, c, d, e) \
+  a b(d e) { \
+    asm volatile("mov $" c ", %%eax; mov %0, %%ebx; int $0x80" : : "m" (e) : "ebx"); \
+  }
+#define syscall_hdlr_2(a, b, c, d, e, f, g) \
+  a b(d e, f g) { \
+    asm volatile("mov $" c ", %%eax; mov %0, %%ebx; mov %1, %%ecx; int $0x80" : : "m" (e), "m" (g) : "ebx", "ecx"); \
+  }
+#define syscall_hdlr_3(a, b, c, d, e, f, g, h, i) \
+  a b(d e, f g, h i) { \
+    asm volatile("mov $" c ", %%eax; mov %0, %%ebx; mov %1, %%ecx; mov %2, %%edx; int $0x80" : : "m" (e), "m" (g), "m" (i) : "ebx", "ecx", "edx"); \
+  }
+
+#include "syscalls.h"
+
 void print(char* string) {
   char* c = string;
   int i=0;
   while (*(c++))
     i++;
   write(i, 0, (uint8_t*)string);
-}
-
-void* localalloc(uint32_t size) {
-  asm volatile ("mov $4, %%eax; mov %0, %%esi; int $0x7f" : : "m" (size) : "esi");
-}
-
-void localdelete(void* ptr) {
-  asm volatile ("mov $5, %%eax; mov %0, %%esi; int $0x7f" : : "m" (ptr) : "esi");
-}
-
-uint32_t getPID() {
-  asm volatile ("mov $8, %%eax; int $0x7f" : : :);
-}
-
-int read(uint32_t count, void* filehanlder, uint8_t* buffer) {
-  asm volatile ("mov $10, %%eax; mov %0, %%ebx; mov %1, %%esi; mov %2, %%edi; int $0x7f" : : "m" (count), "m" (filehanlder), "m" (buffer): "ebx", "esi", "edi");
-}
-
-int write(uint32_t count, void* filehanlder, uint8_t* buffer) {
-  asm volatile ("mov $11, %%eax; mov %0, %%ebx; mov %1, %%esi; mov %2, %%edi; int $0x7f" : : "m" (count), "m" (filehanlder), "m" (buffer): "ebx", "esi", "edi");
-}
-
-uint32_t fork(uint32_t fh) {
-  asm volatile("mov $7, %%eax; mov %0, %%esi; int $0x7f" : : "m" (fh) : "esi");
-}
-
-uint32_t bindStdout(uint32_t PID) {
-  asm volatile("mov $13, %%eax; mov %0, %%esi; int $0x7f" : : "m" (PID) : "esi");
-}
-
-uint32_t bindStdin(uint32_t PID) {
-  asm volatile("mov $14, %%eax; mov %0, %%esi; int $0x7f" : : "m" (PID) : "esi");
-}
-
-int fopen(char* filename) {
-  asm volatile("mov $15, %%eax; mov %0, %%esi; int $0x7f" : : "m" (filename) : "esi");
-}
-
-void fclose(uint32_t fh) {
-  asm volatile("mov $16, %%eax; mov %0, %%esi; int $0x7f" : : "m" (fh) : "esi");
-}
-
-void kill(uint32_t pid) {
-  asm volatile("mov $17, %%eax; mov %0, %%esi; int $0x7f" : : "m" (pid) : "esi");
-}
-
-void sleep(uint32_t time) {
-  asm volatile("mov $18, %%eax; mov %0, %%esi; int $0x7f" : : "m" (time) : "esi");
-}
-
-void bindToKeyboard() {
-  asm volatile ("mov $12, %%eax; int $0x7f" : : :);
 }
 
 int int_to_decimal(unsigned int number, char* string_buffer) {

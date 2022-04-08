@@ -178,7 +178,7 @@ void syscall(frame_struct* frame) {
   // 4: localalloc: LocalAlloc: Allocate under current process (in esi: size; out eax void* ptr)
   // 5: localdelete: LocalDelete: Deallocate under current process (in esi: pointer)
   // 6: X
-  // 7: fork :: char* filename esi -> int PID // Spawns a process and returns its PID.
+  // 7: fork :: void* filehandler esi -> int PID // Spawns a process and returns its PID.
   // 8: getPID: returns the current process's PID (out eax: uint32_t)
   // 9: getFileHandler :: char* path esi -> void* eax // Returns a file handlers for a specific file
   // 10: read :: uint32_t count ebx -> void* filehandler esi -> uint8_t* outputbuffer edi -> int read // Reads from a file handler in to a buffer, returns successful read
@@ -203,9 +203,6 @@ void syscall(frame_struct* frame) {
 
   uint32_t rval = frame->eax;
 
-  uint32_t esi = frame->esi;
-  uint32_t edi = frame->edi;
-
   Process* currentProc = Global::currentProc;
 
   switch (frame->eax) {
@@ -218,16 +215,16 @@ void syscall(frame_struct* frame) {
     case 3:
       break;
     case 4:
-      rval = currentProc->allocate(esi);
+      rval = currentProc->allocate(frame->ebx);
       break;
     case 5:
-      currentProc->deallocate(esi);
+      currentProc->deallocate(frame->ebx);
       break;
     case 6:
       break;
     case 7: {
       asm("cli");
-      Process* p = Global::kernel->createProcess(esi);
+      Process* p = Global::kernel->createProcess(frame->ebx);
       rval = p->PID;
       asm("sti");
       break;
@@ -240,41 +237,41 @@ void syscall(frame_struct* frame) {
       break;
 
     case 10: {
-      if (esi == 1) {
+      if (frame->ecx == 1) {
         ReadWriter* stdin = currentProc->stdin;
         if (!stdin)
           break;
         
-        rval = stdin->read(frame->ebx, edi);
+        rval = stdin->read(frame->ebx, frame->edx);
       } else {
-        xnoe::Maybe<ReadWriter*> fh = Global::FH->get(esi);
+        xnoe::Maybe<ReadWriter*> fh = Global::FH->get(frame->ecx);
         if (!fh.is_ok()) {
           rval = 0;
           break;
         }
         
         ReadWriter* rw = fh.get();
-        rval = rw->read(frame->ebx, edi);
+        rval = rw->read(frame->ebx, frame->edx);
       }
       break;
     }
 
     case 11: {
-      if (esi == 0) {
+      if (frame->ecx == 0) {
         ReadWriter* stdout = currentProc->stdout;
         if (!stdout)
           break;
         
-        rval = stdout->write(frame->ebx, edi);
+        rval = stdout->write(frame->ebx, frame->edx);
       } else {
-        xnoe::Maybe<ReadWriter*> fh = Global::FH->get(esi);
+        xnoe::Maybe<ReadWriter*> fh = Global::FH->get(frame->ecx);
         if (!fh.is_ok()) {
           rval = 0;
           break;
         }
         
         ReadWriter* rw = fh.get();
-        rval = rw->write(frame->ebx, edi);
+        rval = rw->write(frame->ebx, frame->edx);
       }
       break;
     }
@@ -288,12 +285,12 @@ void syscall(frame_struct* frame) {
       break;
     
     case 13: {
-      xnoe::Maybe<Process*> pm = Global::kernel->pid_map->get(esi);
+      xnoe::Maybe<Process*> pm = Global::kernel->pid_map->get(frame->ebx);
       if (!pm.is_ok())
         break;
       Process* p = pm.get();
       if (!p->stdout) {
-        ReadWriter* buffer = new CircularRWBuffer(currentProc->PID, esi);
+        ReadWriter* buffer = new CircularRWBuffer(currentProc->PID, frame->ebx);
         p->stdout = buffer;
         rval = Global::kernel->mapFH(buffer);
       }
@@ -301,12 +298,12 @@ void syscall(frame_struct* frame) {
     }
 
     case 14: {
-      xnoe::Maybe<Process*> pm = Global::kernel->pid_map->get(esi);
+      xnoe::Maybe<Process*> pm = Global::kernel->pid_map->get(frame->ebx);
       if (!pm.is_ok())
         break;
       Process* p = pm.get();
       if (!p->stdin) {
-        ReadWriter* buffer = new CircularRWBuffer(esi, currentProc->PID);
+        ReadWriter* buffer = new CircularRWBuffer(frame->ebx, currentProc->PID);
         p->stdin = buffer;
         rval = Global::kernel->mapFH(buffer);
       }
@@ -314,24 +311,24 @@ void syscall(frame_struct* frame) {
     }
 
     case 15: {
-      ReadWriter* file = Global::kernel->rootfs->open(createPathFromString(esi));
+      ReadWriter* file = Global::kernel->rootfs->open(createPathFromString(frame->ebx));
       if (file)
         rval = Global::kernel->mapFH(file);
       break;
     }
 
     case 16: {
-      xnoe::Maybe<ReadWriter*> f = Global::FH->get(esi);
+      xnoe::Maybe<ReadWriter*> f = Global::FH->get(frame->ebx);
       if (f.is_ok()) {
         delete f.get();
-        Global::kernel->unmapFH(esi);
+        Global::kernel->unmapFH(frame->ebx);
       }
       break;
     }
 
     case 17: {
       asm("cli");
-      xnoe::Maybe<Process*> p = Global::kernel->pid_map->get(esi);
+      xnoe::Maybe<Process*> p = Global::kernel->pid_map->get(frame->ebx);
       if (p.is_ok()) {
         Process* proc = p.get();
         Global::kernel->destroyProcess(proc);
@@ -342,7 +339,7 @@ void syscall(frame_struct* frame) {
 
     case 18: {
       Global::currentProc->state = Suspended;
-      Timer::register_event(esi, &awaken, (void*)Global::currentProc, true);
+      Timer::register_event(frame->ebx, &awaken, (void*)Global::currentProc, true);
       context_switch(frame);
       break;
     }
@@ -384,9 +381,9 @@ void init_idt() {
   gates[29] = &handle_fault;
   gates[30] = &handle_fault;
   gates[31] = &handle_fault;
-  gates[127] = &syscall;
+  gates[128] = &syscall;
 
-  idt[127].privilege = 3;
+  idt[128].privilege = 3;
 
   outb(0x20, 0x11);
   outb(0xA0, 0x11);
