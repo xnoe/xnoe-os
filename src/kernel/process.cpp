@@ -22,6 +22,7 @@ Process::Process(uint32_t PID, void* stack, PageDirectory* page_directory, PageM
   this->page_remaining = 0;
   this->last_page_pointer = virt_alloc_base;
   this->stack = stack;
+  this->state = Running;
 }
 
 Process::Process(uint32_t PID)
@@ -31,6 +32,7 @@ Process::Process(uint32_t PID)
   this->last_page_pointer = 0;
   this->stack = this->allocate(0x8000);
   this->kernelStackPtr = (new uint8_t[0x1000]) + 0x1000;
+  this->state = Running;
 }
 
 Process::Process(uint32_t PID, PageDirectory* inherit, uint32_t inheritBase, uint32_t fh)
@@ -43,6 +45,7 @@ Process::Process(uint32_t PID, PageDirectory* inherit, uint32_t inheritBase, uin
   this->PID = PID;
   this->page_remaining = 0;
   this->last_page_pointer = 0;
+  this->state = Running;
 
   for (int index = inheritBase >> 22; index < 1024; index++)
     this->PD->page_directory[index] = inherit->page_directory[index];

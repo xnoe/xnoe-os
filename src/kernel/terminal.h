@@ -14,7 +14,7 @@
 struct frame_struct;
 
 namespace Timer {
-  void register_event(uint32_t milliseconds, void(*function)(frame_struct*, void*), void* auxiliary);
+  void register_event(uint32_t milliseconds, void(*function)(frame_struct*, void*), void* auxiliary, bool oneshot=false);
 }
 
 class Terminal: public ReadWriter {

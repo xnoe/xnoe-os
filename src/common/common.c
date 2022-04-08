@@ -52,6 +52,10 @@ void kill(uint32_t pid) {
   asm volatile("mov $17, %%eax; mov %0, %%esi; int $0x7f" : : "m" (pid) : "esi");
 }
 
+void sleep(uint32_t time) {
+  asm volatile("mov $18, %%eax; mov %0, %%esi; int $0x7f" : : "m" (time) : "esi");
+}
+
 void bindToKeyboard() {
   asm volatile ("mov $12, %%eax; int $0x7f" : : :);
 }

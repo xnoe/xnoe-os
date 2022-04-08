@@ -187,7 +187,7 @@ int main() {
   uint32_t p1out = bindStdout(p1);
   uint32_t p1in = bindStdin(p1);
   fclose(program);
-  program = fopen("/hello.bin");
+  program = fopen("/timer.bin");
   uint32_t p2 = fork(program);
   uint32_t p2out = bindStdout(p2);
   uint32_t p2in = bindStdin(p2);

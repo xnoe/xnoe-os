@@ -20,6 +20,11 @@ struct AllocTracker {
   AllocTracker(void* base, uint32_t size, uint32_t count);
 };
 
+enum ProcessState {
+  Running,
+  Suspended
+};
+
 class Process : public Allocator {
 private:
   uint32_t last_page_pointer;
@@ -43,6 +48,8 @@ public:
   ReadWriter* stdin;
 
   bool firstRun;
+
+  ProcessState state;
 
   Process(uint32_t PID, void* stack, PageDirectory* page_directory, PageMap* phys, PageMap* virt, uint32_t virt_alloc_base);
   Process(uint32_t PID);

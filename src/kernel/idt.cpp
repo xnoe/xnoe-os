@@ -97,31 +97,33 @@ void context_switch(frame_struct* frame) {
   // - Determines if it has 2 or more elements
   //   - If it has two, swap the first and last, update prev and next of each to be null or the other item
   //   - If it has more than two, add the start to the end then set start to the second element
-  if (Global::currentProc) {
-    if (processes->start->next != 0) {
-      if (processes->end->prev == processes->start) {
-        xnoe::linkedlistelem<Process*>* tmp = processes->start;
-        processes->start = processes->end;
-        processes->end = tmp;
+  do {
+    if (Global::currentProc) {
+      if (processes->start->next != 0) {
+        if (processes->end->prev == processes->start) {
+          xnoe::linkedlistelem<Process*>* tmp = processes->start;
+          processes->start = processes->end;
+          processes->end = tmp;
 
-        processes->start->prev = 0;
-        processes->end->next = 0;
-        processes->end->prev = processes->start;
-        processes->start->next = processes->end;
-      } else {
-        processes->end->next = processes->start;
-        processes->start = processes->start->next;
-        processes->start->prev = 0;
-        xnoe::linkedlistelem<Process*>* tmp = processes->end;
-        processes->end = processes->end->next;
-        processes->end->next = 0;
-        processes->end->prev = tmp;
+          processes->start->prev = 0;
+          processes->end->next = 0;
+          processes->end->prev = processes->start;
+          processes->start->next = processes->end;
+        } else {
+          processes->end->next = processes->start;
+          processes->start = processes->start->next;
+          processes->start->prev = 0;
+          xnoe::linkedlistelem<Process*>* tmp = processes->end;
+          processes->end = processes->end->next;
+          processes->end->next = 0;
+          processes->end->prev = tmp;
+        }
       }
     }
-  }
+    Global::currentProc = processes->start->elem;
+  } while (Global::currentProc->state == Suspended);
 
-  Global::currentProc = processes->start->elem;
-
+  
   // Select the next processes page directory
   frame->new_cr3 = Global::currentProc->PD->phys_addr;
   // Restore kernelStackPtr of the new process.
@@ -134,7 +136,8 @@ void context_switch(frame_struct* frame) {
 }
 
 namespace Timer {
-  using TimedEvent = xnoe::tuple<uint32_t, uint32_t, void(*)(frame_struct*, void*), void*>;
+  // counter, default count, function, argument, oneshot
+  using TimedEvent = xnoe::tuple<uint32_t, uint32_t, void(*)(frame_struct*, void*), void*, bool>;
   xnoe::linkedlist<TimedEvent> timed_events;
   void tick(frame_struct* frame) {
     xnoe::linkedlistelem<TimedEvent>* current = timed_events.start;
@@ -144,15 +147,26 @@ namespace Timer {
       if (--count == 0) {
         xnoe::get<2>(t)(frame, xnoe::get<3>(t));
         count = xnoe::get<1>(t);
+
+        if (xnoe::get<4>(t)) {
+          xnoe::linkedlistelem<TimedEvent>* prev = current;
+          current = current->next;
+          timed_events.remove(prev);
+          delete prev;
+        }
       }
-      current->elem = TimedEvent(count, xnoe::get<1>(t), xnoe::get<2>(t), xnoe::get<3>(t));
+      current->elem = TimedEvent(count, xnoe::get<1>(t), xnoe::get<2>(t), xnoe::get<3>(t), xnoe::get<4>(t));
       current = current->next;
     }
   }
 
-  void register_event(uint32_t milliseconds, void(*function)(frame_struct*, void*), void* auxiliary) {
-    timed_events.append(TimedEvent(milliseconds, milliseconds, function, auxiliary));
+  void register_event(uint32_t milliseconds, void(*function)(frame_struct*, void*), void* auxiliary, bool oneshot=false) {
+    timed_events.append(TimedEvent(milliseconds, milliseconds, function, auxiliary, oneshot));
   }
+}
+
+void awaken(frame_struct* frame, Process* p) {
+  p->state = Running;
 }
 
 void syscall(frame_struct* frame) {
@@ -178,6 +192,8 @@ void syscall(frame_struct* frame) {
   // 16: fclose :: int filehandler esi -> void // Closes a file handler.
 
   // 17: kill :: int PID esi -> void // Destroys a process.
+
+  // 18: sleep :: int time ms esi -> void // Sleeps the current process for esi milliseconds.
 
   // File handlers:
   // 0: Stdout
@@ -321,6 +337,13 @@ void syscall(frame_struct* frame) {
         Global::kernel->destroyProcess(proc);
       }
       asm("sti");
+      break;
+    }
+
+    case 18: {
+      Global::currentProc->state = Suspended;
+      Timer::register_event(esi, &awaken, (void*)Global::currentProc, true);
+      context_switch(frame);
       break;
     }
 

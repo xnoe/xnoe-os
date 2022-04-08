@@ -105,10 +105,10 @@ namespace xnoe {
             current->next->prev = current->prev;
 
           if (current == start)
-            start = 0;
+            start = current->next;
 
           if (current = end)
-            end = 0;
+            end = current->prev;
 
           return;
         }
