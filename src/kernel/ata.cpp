@@ -31,27 +31,27 @@ DataRegister(controlBase[bus]+0),
 ErrorRegister(controlBase[bus]+1),
 FeaturesRegister(controlBase[bus]+1),
 SectorCountRegister(controlBase[bus]+2),
-LBOLo(controlBase[bus]+3),
-LBOMid(controlBase[bus]+4),
-LBOHi(controlBase[bus]+5),
+LBALo(controlBase[bus]+3),
+LBAMid(controlBase[bus]+4),
+LBAHi(controlBase[bus]+5),
 DriveSelectRegister(controlBase[bus]+6),
 StatusRegister(controlBase[bus]+7),
 CommandRegister(controlBase[bus]+7) {
   this->isValid = 0;
   
   DriveSelectRegister.writeb(0xA0);
-  LBOLo.writeb(0);
-  LBOMid.writeb(0);
-  LBOHi.writeb(0);
+  LBALo.writeb(0);
+  LBAMid.writeb(0);
+  LBAHi.writeb(0);
   CommandRegister.writeb(0xEC);
 
   if (!readStatus()) {
     this->isValid = false;
   } else {
     pollTillNotBSY();
-    uint8_t lbomid;
-    uint8_t lbohi;
-    if ((lbomid = LBOMid.readb()) || (lbohi = LBOHi.readb())) {
+    uint8_t LBAmid;
+    uint8_t LBAhi;
+    if ((LBAmid = LBAMid.readb()) || (LBAhi = LBAHi.readb())) {
       this->isValid = false;
     } else {
       uint8_t status = pollTillDRQ();
@@ -76,9 +76,9 @@ bool ATA::validDevice() {
 void ATA::ATARead(uint32_t sector, uint8_t* buffer) {
   DriveSelectRegister.writeb(0xE0 | ((sector >> 24) & 0xf));
   SectorCountRegister.writeb(1);
-  LBOLo.writeb((uint8_t)sector);
-  LBOMid.writeb((uint8_t)(sector>>8));
-  LBOHi.writeb((uint8_t)(sector>>16));
+  LBALo.writeb((uint8_t)sector);
+  LBAMid.writeb((uint8_t)(sector>>8));
+  LBAHi.writeb((uint8_t)(sector>>16));
   CommandRegister.writeb(0x20);
   pollTillNotBSY();
   for (int i=0; i<256; i++)
@@ -88,9 +88,9 @@ void ATA::ATARead(uint32_t sector, uint8_t* buffer) {
 void ATA::ATAWrite(uint32_t sector, uint8_t* buffer) {
   DriveSelectRegister.writeb(0xE0 | ((sector >> 24) & 0xf));
   SectorCountRegister.writeb(1);
-  LBOLo.writeb((uint8_t)sector);
-  LBOMid.writeb((uint8_t)(sector>>8));
-  LBOHi.writeb((uint8_t)(sector>>16));
+  LBALo.writeb((uint8_t)sector);
+  LBAMid.writeb((uint8_t)(sector>>8));
+  LBAHi.writeb((uint8_t)(sector>>16));
   CommandRegister.writeb(0x30);
   pollTillNotBSY();
   for (int i=0; i<256; i++)

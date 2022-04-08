@@ -38,9 +38,9 @@
 // Error Register    R    1        1        2
 // Features Reg.     W    1        1        2
 // Sector Count Reg. RW   2        1        2
-// LBOlo             RW   3        1        2
-// LBOmid            RW   4        1        2
-// LBOhi             RW   5        1        2
+// LBAlo             RW   3        1        2
+// LBAmid            RW   4        1        2
+// LBAhi             RW   5        1        2
 // Drive Select      RW   6        1        1
 // Status Reg        R    7        1        1
 // Command Reg       W    7        1        1
@@ -72,9 +72,9 @@ protected:
   Port ErrorRegister;
   Port FeaturesRegister;
   Port SectorCountRegister;
-  Port LBOLo;
-  Port LBOMid;
-  Port LBOHi;
+  Port LBALo;
+  Port LBAMid;
+  Port LBAHi;
   Port DriveSelectRegister;
   Port StatusRegister;
   Port CommandRegister;
