@@ -1,35 +1,224 @@
 #include "terminal.h"
 
-void Terminal::scroll_up() {
-  // Scroll the entire buffer up.
-  for (int y = 0; y < (height * pages); y++) {
-    uint16_t* cline = buffer + y * width;
-    uint16_t* nline = buffer + (y+1) * width;
-    for (int x = 0; x < width; x++) {
-      cline[x] = nline[x];
+int strToInt(char* str, uint32_t max) {
+  int r=0;
+  int i=0;
+  while (*str >= 0x30 && *str <= 0x39 && i < max) {
+    r *= 10;
+    r += *(str++) - 0x30;
+    i++;
+  }
+  return r;
+}
+
+int clamp(int a, int b, int c) {
+  if (a < b)
+    return b;
+  if (a > c)
+    return c;
+  return a;
+}
+
+void Terminal::scroll_up(uint32_t count) {
+  for (int i=0; i<count; i++) {
+    // Scroll the entire buffer up.
+    for (int y = 0; y < (height * pages); y++) {
+      uint16_t* cline = buffer + y * width;
+      uint16_t* nline = buffer + (y+1) * width;
+      for (int x = 0; x < width; x++) {
+        cline[x] = nline[x];
+      }
     }
+    // Clear the last line
+    uint16_t* last_line = buffer + (height * pages - 1) * width;
+    for (int x = 0; x < width; x++) {
+      last_line[x] = 0x20 | (edata << 8);
+    }
+    this->cur_y--;
   }
-  // Clear the last line
-  uint16_t* last_line = buffer + (height * pages - 1) * width;
-  for (int x = 0; x < width; x++) {
-    last_line[x] = 0x0720;
-  }
-  this->cur_y--;
 
   this->update();
 }
 
-void Terminal::putchar(uint32_t ptr, uint8_t c, uint8_t edata) {
-  // All modifications to the screen are done to the last page.
-  last_page_pointer[ptr] = c | (edata<<8);
 
-  if (active)
-    putchar_internal(ptr, c, edata);
+void Terminal::scroll_down(uint32_t count) {
+  for (int i=0; i<count; i++) {
+    // Scroll the entire buffer up.
+    for (int y = (height * pages)-2; y >= 0; y--) {
+      uint16_t* nline = buffer + y * width;
+      uint16_t* cline = buffer + (y+1) * width;
+      for (int x = 0; x < width; x++) {
+        cline[x] = nline[x];
+      }
+    }
+    // Clear the last line
+    uint16_t* last_line = buffer + (height * (pages - 1)) * width;
+    for (int x = 0; x < width; x++) {
+      last_line[x] = 0x20 | (edata << 8);
+    }
+    this->cur_y--;
+  }
+
+  this->update();
+}
+
+void Terminal::putchar(uint8_t c) {
+  again:
+  switch (this->state) {
+    case None:
+      switch (c) {
+        case 0x1b:
+          this->state = EscapeCode;
+          break;
+        case '\n':
+          this->cur_x = 0;
+          this->cur_y++;
+          break;
+        case '\b':
+          if (this->cur_x == 0) {
+            if (this->cur_y > 0) {
+              this->cur_x = this->width-1;
+              this->cur_y--;
+            }
+          } else {
+            this->cur_x--;
+          }
+          last_page_pointer[this->cur_y*this->width+this->cur_x] = ' ' | (edata<<8);
+          if (active)
+            putchar_internal(this->cur_y*this->width+this->cur_x, ' ');
+          break;
+        default:
+          if (this->cur_x == this->width) {
+            this->cur_x = 0;
+            this->cur_y++;
+          }
+          // All modifications to the screen are done to the last page.
+          last_page_pointer[this->cur_y*this->width+this->cur_x] = c | (edata<<8);
+
+          if (active)
+            putchar_internal(this->cur_y*this->width+this->cur_x, c);
+          this->cur_x++;
+          break;
+      }
+      break;
+    case EscapeCode:
+      switch (c) {
+        case '[':
+          this->state = CSI;
+          break;
+        default:
+          break;
+      }
+      break;
+    case CSI:
+      this->state = ParameterBytes;
+      this->parameterIndex = 0;
+      this->intermediaryIndex = 0;
+      goto again;
+      break;
+    case ParameterBytes:
+      if (parameterIndex < 128 && c >= 0x30 && c <= 0x3F) {
+        parameterBytes[parameterIndex++] = c;
+      } else {
+        parameterIndex;
+        this->state = IntermediaryBytes;
+        goto again;
+      }
+      break;
+    case IntermediaryBytes:
+      if (intermediaryIndex < 128 && c >= 0x20 && c <= 0x2F) {
+        intermediaryBytes[intermediaryIndex++] = c;
+      } else {
+        intermediaryIndex;
+        this->state = FinalByte;
+        goto again;
+      }
+      break;
+    case FinalByte:
+      switch (c) {
+        case 'A':
+          this->cur_y -= clamp(strToInt(parameterBytes, parameterIndex), 0, this->cur_y);
+          break;
+        case 'B':
+          this->cur_y += clamp(strToInt(parameterBytes, parameterIndex), 0, this->height - this->cur_y);
+          break;
+        case 'C':
+          this->cur_x += clamp(strToInt(parameterBytes, parameterIndex), 0, this->width - this->cur_x);
+          break;
+        case 'D':
+          this->cur_x -= clamp(strToInt(parameterBytes, parameterIndex), 0, this->cur_x);
+          break;
+        case 'E':
+          this->cur_y += clamp(strToInt(parameterBytes, parameterIndex), 0, this->height - this->cur_y);
+          this->cur_x = 0;
+          break;
+        case 'F':
+          this->cur_y -= clamp(strToInt(parameterBytes, parameterIndex), 0, this->cur_y);
+          this->cur_x = 0;
+          break;
+        case 'G':
+          this->cur_x = clamp(strToInt(parameterBytes, parameterIndex), 0, this->width);
+          break;
+        case 'f':
+        case 'H': {
+          uint32_t semicolonIndex = 0;
+          while (parameterBytes[semicolonIndex++] != ';' && semicolonIndex <= parameterIndex);
+          this->cur_y = clamp(strToInt(parameterBytes, parameterIndex) - 1, 0, this->height) ;
+          this->cur_x = clamp(strToInt(parameterBytes+semicolonIndex, parameterIndex-semicolonIndex) - 1, 0, this->width);
+          break;
+        }
+        case 'm':
+          this->state = SGR;
+          goto again;
+          break;
+        default: 
+          break;
+      }
+      this->state = None;
+      break;
+    case SGR: {
+      uint32_t index = 0;
+      while (index <= parameterIndex) {
+        uint32_t n = strToInt(parameterBytes+index, parameterIndex-index);
+        switch (n) {
+          case 0:
+            this->edata = 0xf;
+            break;
+          case 1:
+            if ((this->edata&0xf) <= 0x7)
+              this->edata += 8;
+            break;
+          case 2:
+            if ((this->edata&0xf) >= 0x7)
+              this->edata -= 8;
+            break;
+          case 30 ... 37:
+            this->edata &= 0xf0;
+            this->edata |= n-30;
+            break;
+          case 40 ... 47:
+            this->edata &= 0x0f;
+            this->edata |= (n-40)<<4;
+            break;
+          default:
+            break;
+        }
+        while (parameterBytes[index++] != ';' && index <= parameterIndex);
+      }
+      this->state = None;
+    }
+    default:
+      break;
+  }
+  if (this->cur_y == this->height) {
+    this->cur_y--;
+    scroll_up();
+  }
 }
 
 void Terminal::update(){}
 void Terminal::update_cur(){}
-void Terminal::putchar_internal(uint32_t ptr, uint8_t c, uint8_t edata) {}
+void Terminal::putchar_internal(uint32_t ptr, uint8_t c) {}
 
 Terminal::Terminal(uint32_t width, uint32_t height, uint32_t pages)
 : ReadWriter(0) {
@@ -46,23 +235,6 @@ Terminal::Terminal(uint32_t width, uint32_t height, uint32_t pages)
   this->active = false;
 }
 
-int strToInt(char* str) {
-  int r=0;
-  while (*str >= 0x30 && *str <= 0x39) {
-    r *= 10;
-    r += *(str++) - 0x30;
-  }
-  return r;
-}
-
-int clamp(int a, int b, int c) {
-  if (a < b)
-    return b;
-  if (a > c)
-    return c;
-  return a;
-}
-
 void Terminal::printf(const char* string, ...) {
   va_list ptr;
   va_start(ptr, string);
@@ -71,73 +243,6 @@ void Terminal::printf(const char* string, ...) {
   char current;
 
   while (current=string[index++]) {
-    if (current == '\n') {
-      this->cur_x = 0;
-      this->cur_y++;
-    }
-
-    if (current == 0x1b && string[index] == '[') {
-      index++;
-      char* parameterStart = (string+index);
-      while (string[index] >= 0x30 && string[index] <= 0x3F)
-        index++;
-      char* parameterEnd = (string+index);
-
-      char* intermediateStart = (string+index);
-      while (string[index] >= 0x20 && string[index] <= 0x2F)
-        index++;
-
-      char final = *(string+(index++));
-
-      switch (final) {
-        case 'A':
-          this->cur_y -= clamp(strToInt(parameterStart), 0, this->cur_y);
-          break;
-        case 'B':
-          this->cur_y += clamp(strToInt(parameterStart), 0, this->height - this->cur_y);
-          break;
-        case 'C':
-          this->cur_x += clamp(strToInt(parameterStart), 0, this->width - this->cur_x);
-          break;
-        case 'D':
-          this->cur_x -= clamp(strToInt(parameterStart), 0, this->cur_x);
-          break;
-        case 'H': {
-          char* s=parameterStart;
-          while (*s != ';' && s < parameterEnd)
-            s++;
-          s++;
-          this->cur_y = clamp(strToInt(parameterStart), 1, this->height) - 1;
-          this->cur_x = clamp(strToInt(s), 1, this->width) - 1;
-          break;
-        }
-      }
-
-      continue;
-    }
-
-    if (current == '\b') {
-      if (this->cur_x > 0) {
-        this->cur_x--;
-      } else if (this->cur_y > 0) {
-        this->cur_y--;
-        this->cur_x = this->width-1;
-      }
-
-      int mem_pos = this->cur_y * this->width + this->cur_x;
-      
-      this->putchar(mem_pos, ' ');
-      continue;
-    }
-
-    if (this->cur_x == this->width) {
-      this->cur_x = 0;
-      this->cur_y++;
-    }
-
-    if (this->cur_y == this->height)
-      this->scroll_up();
-
     if (current == '%') {
       int type = string[index++];
       int offset;
@@ -159,22 +264,17 @@ void Terminal::printf(const char* string, ...) {
           break;
         }
         case 'c': {
-          int mem_pos = this->cur_y * this->width + this->cur_x++;
           int promoted = va_arg(ptr, int);
           char charred = promoted;
           
-          this->putchar(mem_pos, charred);
+          this->putchar(charred);
           break;
         }
       }
       continue;
     }
-
-    if (current != '\n') {
-      int mem_pos = this->cur_y * this->width + this->cur_x++;
       
-      this->putchar(mem_pos, current);
-    }
+    this->putchar(current);
   }
 
   this->set_curpos(this->cur_x, this->cur_y);
@@ -183,84 +283,8 @@ void Terminal::printf(const char* string, ...) {
 }
 
 uint32_t Terminal::write(uint32_t count, uint8_t* string) {
-  int index = 0;
-  char current;
-
-  while (index < count) {
-    current=string[index++];
-    if (current == '\n') {
-      this->cur_x = 0;
-      this->cur_y++;
-    }
-
-    if (current == 0x1b && string[index] == '[') {
-      index++;
-      char* parameterStart = (string+index);
-      while (string[index] >= 0x30 && string[index] <= 0x3F)
-        index++;
-      char* parameterEnd = (string+index);
-
-      char* intermediateStart = (string+index);
-      while (string[index] >= 0x20 && string[index] <= 0x2F)
-        index++;
-
-      char final = *(string+(index++));
-
-      switch (final) {
-        case 'A':
-          this->cur_y -= clamp(strToInt(parameterStart), 0, this->cur_y);
-          break;
-        case 'B':
-          this->cur_y += clamp(strToInt(parameterStart), 0, this->height - this->cur_y);
-          break;
-        case 'C':
-          this->cur_x += clamp(strToInt(parameterStart), 0, this->width - this->cur_x);
-          break;
-        case 'D':
-          this->cur_x -= clamp(strToInt(parameterStart), 0, this->cur_x);
-          break;
-        case 'H': {
-          char* s=parameterStart;
-          while (*s != ';' && s < parameterEnd)
-            s++;
-          s++;
-          this->cur_y = clamp(strToInt(parameterStart), 1, this->height) - 1;
-          this->cur_x = clamp(strToInt(s), 1, this->width) - 1;
-          break;
-        }
-      }
-
-      continue;
-    }
-
-    if (current == '\b') {
-      if (this->cur_x > 0) {
-        this->cur_x--;
-      } else if (this->cur_y > 0) {
-        this->cur_y--;
-        this->cur_x = this->width-1;
-      }
-
-      int mem_pos = this->cur_y * this->width + this->cur_x;
-      
-      this->putchar(mem_pos, ' ');
-      continue;
-    }
-
-    if (this->cur_x == this->width) {
-      this->cur_x = 0;
-      this->cur_y++;
-    }
-
-    if (this->cur_y == this->height)
-      this->scroll_up();
-
-    if (current != '\n') {
-      int mem_pos = this->cur_y * this->width + this->cur_x++;
-      
-      this->putchar(mem_pos, current);
-    }
-  }
+  for (int index=0; index < count; index++)
+    this->putchar(string[index]);
 
   this->set_curpos(this->cur_x, this->cur_y);
 }
@@ -322,7 +346,7 @@ void TextModeTerminal::update_cur() {
   outb(0x3D5, cursor_position_split[1]);
 }
 
-void TextModeTerminal::putchar_internal(uint32_t ptr, uint8_t c, uint8_t edata) {
+void TextModeTerminal::putchar_internal(uint32_t ptr, uint8_t c) {
   text_mode_pointer[ptr] = c | (edata << 8);
 }
 
@@ -333,7 +357,7 @@ TextModeTerminal::TextModeTerminal(uint16_t* text_mode_pointer): Terminal(80, 25
 void VGAModeTerminal::update() {
   for (int y = 0; y < height; y++) {
     for (int x = 0; x < width; x++) {
-      putchar_internal(y * width + x, (uint8_t)(current_page_pointer[y * width + x]), 0);
+      putchar_internal(y * width + x, (uint8_t)(current_page_pointer[y * width + x]));
     }
   }
 }
@@ -342,7 +366,7 @@ void VGAModeTerminal::update_cur() {
   // Todo: Implement cursor for VGAModeTerminal
 }
 
-void VGAModeTerminal::putchar_internal(uint32_t ptr, uint8_t c, uint8_t edata) {
+void VGAModeTerminal::putchar_internal(uint32_t ptr, uint8_t c) {
   uint32_t col = ptr % width;
   uint32_t row = ptr / width;
 
@@ -353,11 +377,8 @@ void VGAModeTerminal::putchar_internal(uint32_t ptr, uint8_t c, uint8_t edata) {
     return;
   uint8_t* char_data = font[c];
 
-  for (int y=0; y<8; y++) {
-    //for (int x=0; x<8; x++) {
-      put_pixels_byte(sx, sy+y, 15, char_data[y]);
-    //}
-  }
+  for (int y=0; y<8; y++)
+    put_pixels_byte(sx, sy+y, edata, char_data[y]);
 }
 
 void VGAModeTerminal::put_pixels_byte(uint32_t x, uint32_t y, uint8_t color, uint8_t pixel_byte) {
@@ -371,10 +392,11 @@ void VGAModeTerminal::put_pixels_byte(uint32_t x, uint32_t y, uint8_t color, uin
   }
   
   for (int i=0; i<4; i++) {
+    this->planes[i][pixelindex] = 0;
     if (color & (1<<i))
-      this->planes[i][pixelindex] = trbyte;
-    else
-      this->planes[i][pixelindex] = 0;
+      this->planes[i][pixelindex] |= trbyte;
+    if ((color>>4) & (1<<i))
+      this->planes[i][pixelindex] |= ~trbyte;
   }
 }
 

@@ -3,7 +3,6 @@
 
 #include "paging.h"
 #include "allocate.h"
-#include "screenstuff.h"
 #include "global.h"
 
 void memset(uint8_t* address, uint32_t count, uint8_t value);

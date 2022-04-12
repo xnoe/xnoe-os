@@ -3,7 +3,6 @@
 
 #include "paging.h"
 #include "datatypes/tuple.h"
-//void init_allocator();
 
 extern uint8_t* bitmap;
 extern PDE* kernel_page_directory;

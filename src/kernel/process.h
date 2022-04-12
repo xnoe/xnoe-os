@@ -6,7 +6,6 @@
 #include "datatypes/linkedlist.h"
 #include "datatypes/hashtable.h"
 #include "datatypes/maybe.h"
-#include "screenstuff.h"
 #include "global.h"
 #include "ata.h"
 

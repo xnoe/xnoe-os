@@ -1,6 +1,7 @@
 #ifndef LINKEDLIST_H
 #define LINKEDLIST_H
 
+#include "../types.h"
 #include "../memory.h"
 
 namespace xnoe {

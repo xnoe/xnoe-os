@@ -4,9 +4,15 @@ bool operator==(const PathEntry& lhs, const PathEntry& rhs) {
   if (lhs.length == rhs.length)
     if (lhs.length == 0)
       return true;
+    else if (lhs.length < rhs.length)
+      return strcmp(lhs.path, rhs.path, lhs.length);
     else
       return strcmp(lhs.path, rhs.path, lhs.length);
   return false;
+}
+
+bool operator!=(const PathEntry& lhs, const PathEntry& rhs) {
+  return !(lhs == rhs);
 }
 
 // FS Tree Skeleton
@@ -116,6 +122,21 @@ Path* RootFSTree::getRemainingPath(Path p) {
   return 0;
 }
 
+FSTreeNode* RootFSTree::getExhaustive(Path p) {
+  PathElement* currentPath = p.start;
+  FSTreeNode* currentNode = this->node;
+  if (currentPath->elem != currentNode->self)
+    return 0;
+  while (currentPath && currentNode) {
+    currentNode = getNodeFromPathEntry(currentPath->elem, currentNode);
+    currentPath = currentPath->next;
+  }
+  if (currentPath)
+    return 0;
+  else
+    return currentNode;
+}
+
 template<typename T>
 T RootFSTree::attempt(T(FSTree::*fn)(Path), Path p, T fallback) {
   FSTree* mp = getLongestMatchingUnder(p);
@@ -156,10 +177,53 @@ ReadWriter* RootFSTree::open(Path p){
   return attempt<ReadWriter*>(&FSTree::open, p, 0);
 }
 uint32_t RootFSTree::getDentsSize(Path p){
-  return attempt<uint32_t>(&FSTree::getDentsSize, p, 0);
+  uint32_t size = attempt<uint32_t>(&FSTree::getDentsSize, p, 0);
+  FSTreeNode* n = getExhaustive(p);
+  if (n) {
+    xnoe::linkedlistelem<FSTreeNode*>* current = n->children.start;
+    while (current) {
+      size += sizeof(FSDirectoryEntry);
+      size += current->elem->self.length;
+      current = current->next;
+    }
+  }
+  return size;
 }
 void RootFSTree::getDents(Path p, FSDirectoryListing* buffer){
   attempt(&FSTree::getDents, p, buffer);
+  uint32_t oldCount = buffer->count;
+  uint32_t stringsOffset = buffer->count * sizeof(FSDirectoryEntry) + sizeof(FSDirectoryListing);
+  uint32_t addCount = 0;
+  char* strings = ((uint32_t)buffer) + stringsOffset;
+  FSTreeNode* n = getExhaustive(p);
+  if (n) {
+    xnoe::linkedlistelem<FSTreeNode*>* current = n->children.start;
+    while (current) {
+      addCount++;
+      current = current->next;
+    }
+    if (addCount) {
+      current = n->children.start;
+      for (int i=buffer->stringsLength; i>=0; i--)
+        strings[i+addCount*sizeof(FSDirectoryEntry)] = strings[i];
+      for (int i=0; i < buffer->count; i++)
+        buffer->entries[i].path.path += addCount*sizeof(FSDirectoryEntry);
+      while (current) {
+        strings += addCount*sizeof(FSDirectoryEntry) + buffer->stringsLength;
+        memcpy(current->elem->self.path, strings, current->elem->self.length);
+        buffer->entries[buffer->count++] = FSDirectoryEntry {
+          PathEntry{
+            current->elem->self.length,
+            strings
+          },
+          Directory,
+          0
+        };
+        strings += current->elem->self.length;
+        current = current->next;
+      }
+    }
+  }
 }
 
 bool RootFSTree::isMountpoint(Path p) {

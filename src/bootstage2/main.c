@@ -1,5 +1,4 @@
 #include "atapio.h"
-#include "screenstuff.h"
 #include "paging.h"
 
 typedef struct {
@@ -47,23 +46,7 @@ void mark_unavailble(uint32_t address, uint32_t size, uint8_t* buffer) {
   }
 }
 
-char* stringify_type(uint32_t type) {
-  switch (type) {
-    case 1:
-      return "Usable";
-    case 3:
-      return "ACPI Reclaimable";
-    case 4:
-      return "ACPI NVS";
-    case 5:
-      return "Bad memory";
-    default:
-      return "Reserved";
-  }
-}
-
 void main() {
-  init_term();
   init_atapio();
 
   // e820 memory map exists at 0x20000
@@ -73,13 +56,8 @@ void main() {
   memset(bitmap, 0x20000, 0);
   // Ensure the bitmap data is clear
 
-  for (int i=0; i<0x20000; i++)
-    if (bitmap[i])
-      printf("Found data in bitmap at %x!\n", (bitmap+i));
-
   for (int i=0; e820_entries[i].length_low != 0 || e820_entries[i].length_high != 0; i++) {
     e820entry entry = e820_entries[i];
-    printf("BIOS-e820: Starting %x%x, length %x%x is %s\n", entry.base_high, entry.base_low, entry.length_high, entry.length_low, stringify_type(entry.type));
 
     if (entry.type != 1)
       continue;
@@ -96,8 +74,6 @@ void main() {
       }
     }
     uint32_t page_index = base / 4096;
-
-    printf("Page Index: %d\nLength (Pages): %d\n", page_index, length / 4096);
 
     for (int j=0; length > 4096; length -= 4096, j++) {
       set_bit(page_index + j, bitmap);
@@ -184,8 +160,6 @@ void main() {
   mark_unavailble(0x8a000, 0x10000, bitmap);
 
   load_file("KERNEL  BIN", kernel_location);
-
-  printf("Stage2 success!\n");
 
   //while (1);
 

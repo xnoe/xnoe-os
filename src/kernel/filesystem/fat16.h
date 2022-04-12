@@ -2,14 +2,12 @@
 #define FAT16_H
 
 #include "fstree.h"
-#include "strings.h"
 #include "../memory.h"
 #include "../stdio/readwriter.h"
 #include "../datatypes/tuple.h"
 
 struct __attribute__((packed)) DirectoryEntry {
   char name[11];
-
 
   uint8_t readonly : 1;
   uint8_t hidden : 1;
@@ -72,6 +70,8 @@ private:
 
   uint32_t offsetBytesToCluster(uint32_t offset);
 
+  uint32_t clusterSize;
+
   FAT16FS* backingFS;
 public:
   FAT16FileReadWriter(uint32_t owner, uint32_t firstCluster, uint32_t sizeBytes, FAT16FS* backingFS);
@@ -88,6 +88,7 @@ public:
   uint16_t* FAT1;
   uint8_t sectorOne[512];
 
+  uint8_t* sectorsPerCluster = ((uint8_t*)(sectorOne + 0x0d));
   uint16_t* countReserved = ((uint16_t*)(sectorOne + 0x0e));
   uint8_t* countFATs = ((uint8_t*)(sectorOne + 0x10));
   uint16_t* countRDEs = ((uint16_t*)(sectorOne + 0x11));

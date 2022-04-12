@@ -1,7 +1,6 @@
 #ifndef PAGING_H
 #define PAGING_H
 
-#include <stdbool.h>
 #include "types.h"
 
 struct __attribute__((packed)) split_addr {

@@ -11,4 +11,17 @@ extern "C" {
   uint16_t inw(uint16_t portnumber);
 }
 
+class Port {
+private:
+  uint16_t addr;
+public:
+  Port(uint16_t a);
+
+  uint8_t readb();
+  uint16_t readw();
+
+  void writeb(uint8_t d);
+  void writew(uint16_t d);
+};
+
 #endif

@@ -2,8 +2,8 @@
 #define FSTREE_H
 
 #include "../datatypes/linkedlist.h"
-#include "strings.h"
 #include "../stdio/readwriter.h"
+#include "../strings.h"
 
 struct PathEntry {
   uint16_t length;
@@ -31,6 +31,7 @@ struct FSDirectoryEntry {
 
 struct FSDirectoryListing {
   uint32_t count;
+  uint32_t stringsLength;
   FSDirectoryEntry entries[];
 };
 
@@ -56,6 +57,7 @@ class RootFSTree: public FSTree {
 private:
   FSTree* getLongestMatchingUnder(Path p);
   Path* getRemainingPath(Path p);
+  FSTreeNode* getExhaustive(Path p);
 
   FSTreeNode* makeNodeIfNotExist(Path p);
 

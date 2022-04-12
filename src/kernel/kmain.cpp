@@ -1,5 +1,4 @@
 #include "types.h"
-#include "screenstuff.h"
 #include "io.h"
 #include "idt.h"
 #include "keyboard.h"
@@ -20,7 +19,6 @@
 
 int main() {
   init_gdt();
-  init_term();
   
   PageDirectory kernel_pd = PageDirectory(0xc0100000, 0x120000, 0xbffe0000);
 

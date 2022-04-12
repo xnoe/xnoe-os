@@ -169,6 +169,7 @@ int main() {
   for (int i=0; i < 1000; i++)
     write(1, 0, &space);
   print("\x1b[1;1H");
+  print("\x1b[45;33;1m");
 
   char* mid =    "+                                           ++                                           +";
   char* bottom = "+                                                                                        +";
@@ -181,20 +182,21 @@ int main() {
   write(90, 0, bottom);
   for (int i=0; i<90;i++)
     write(1, 0, &plus);
+  print("\x1b[42;36;1m");
 
   uint32_t program = fopen("/hello.bin");
-  uint32_t p1 = fork(program);
+  uint32_t p1 = exec(program);
   uint32_t p1out = bindStdout(p1);
   uint32_t p1in = bindStdin(p1);
   fclose(program);
   program = fopen("/timer.bin");
-  uint32_t p2 = fork(program);
+  uint32_t p2 = exec(program);
   uint32_t p2out = bindStdout(p2);
   uint32_t p2in = bindStdin(p2);
   fclose(program);
 
   procbuffer b1 = {
-    .buffer = localalloc(56 * 43),
+    .buffer = malloc(56 * 43),
     .x = 0,
     .y = 0,
     .process = p1,
@@ -203,7 +205,7 @@ int main() {
   };
 
   procbuffer b2 = {
-    .buffer = localalloc(56 * 43),
+    .buffer = malloc(56 * 43),
     .x = 0,
     .y = 0,
     .process = p2,
@@ -247,6 +249,11 @@ int main() {
           writeStrToBuf("  Kills the current process\n", selectedBuf);
           writeStrToBuf(":load <filename>\n", selectedBuf);
           writeStrToBuf("  Loads and executes the program <filename>\n", selectedBuf);
+          writeStrToBuf(":ls <path>\n", selectedBuf);
+          writeStrToBuf("  Lists the files in directory <path>\n", selectedBuf);
+          writeStrToBuf(":clear\n", selectedBuf);
+          writeStrToBuf("  Clears the buffer\n", selectedBuf);
+          
           writeStrToBuf("--------\n", selectedBuf);
         } else if (strcmpcnt(4, buf, "kill")) {
           if (selectedBuf->process) {
@@ -255,21 +262,28 @@ int main() {
             selectedBuf->process = 0;
             selectedBuf->stdin = 0;
             selectedBuf->stdout = 0;
-            if (selectedBuf == &b1) {
-              selectedBuf = &b2;
-            } else {
-              selectedBuf = &b1;
-            }
           }
         } else if (strcmpcnt(4, buf, "load")) {
           if (!selectedBuf->process) {
             char* potFn = buf+5;
             uint32_t fh = fopen(potFn);
-            selectedBuf->process = fork(fh);
+            selectedBuf->process = exec(fh);
             selectedBuf->stdout = bindStdout(selectedBuf->process);
             selectedBuf->stdin = bindStdin(selectedBuf->process);
             fclose(fh);
           }
+        } else if (strcmpcnt(2, buf, "ls")) {
+          uint32_t size = getDentsSize((char*)(buf+3));
+          FSDirectoryListing* listing = (FSDirectoryListing*)malloc(size);
+          getDents((char*)(buf+3), listing);
+          writeStrToBuf("\n", selectedBuf);
+          for (int i=0; i<listing->count; i++) {
+            writeCountToBuf(listing->entries[i].path.length, listing->entries[i].path.path, selectedBuf);
+            writeStrToBuf("\n", selectedBuf);
+          }
+          free(listing);
+        } else if (strcmpcnt(5, buf, "clear")) {
+          clearBuf(selectedBuf);
         }
       } else {
         if (selectedBuf->process)

@@ -17,15 +17,32 @@ namespace Timer {
   void register_event(uint32_t milliseconds, void(*function)(frame_struct*, void*), void* auxiliary, bool oneshot=false);
 }
 
+enum TerminalState {
+  None,
+  EscapeCode,
+  CSI,
+  ParameterBytes,
+  IntermediaryBytes,
+  FinalByte,
+  SGR
+};
+
 class Terminal: public ReadWriter {
 private:
   virtual void update();
   virtual void update_cur();
-  virtual void putchar_internal(uint32_t ptr, uint8_t c, uint8_t edata=0x07);
+  virtual void putchar_internal(uint32_t ptr, uint8_t c);
 
-  void scroll_up();
+  void scroll_up(uint32_t count=1);
+  void scroll_down(uint32_t count=1);
   
-  void putchar(uint32_t ptr, uint8_t c, uint8_t edata=0x07);
+  void putchar(uint8_t c);
+
+  TerminalState state = None;
+  uint8_t parameterBytes[128];
+  uint8_t intermediaryBytes[128];
+  uint32_t parameterIndex = 0;
+  uint32_t intermediaryIndex = 0;
 
 protected:
   uint16_t* buffer;
@@ -40,6 +57,8 @@ protected:
   uint16_t* last_page_pointer;
 
   bool active;
+
+  uint8_t edata=0x07;
 public:
   Terminal(uint32_t width, uint32_t height, uint32_t pages);
 
@@ -62,7 +81,7 @@ class TextModeTerminal : public Terminal {
 private:
   void update() override;
   void update_cur() override;
-  void putchar_internal(uint32_t ptr, uint8_t c, uint8_t edata=0x07) override;
+  void putchar_internal(uint32_t ptr, uint8_t c) override;
 
   uint16_t* text_mode_pointer;
 public:
@@ -74,7 +93,7 @@ class VGAModeTerminal : public Terminal {
 private:
   void update() override;
   void update_cur() override;
-  void putchar_internal(uint32_t ptr, uint8_t c, uint8_t edata=0x07) override;
+  void putchar_internal(uint32_t ptr, uint8_t c) override;
 
   void put_pixel(uint32_t x, uint32_t y, uint8_t color);
   void put_pixels_byte(uint32_t x, uint32_t y, uint8_t color, uint8_t pixel_byte);

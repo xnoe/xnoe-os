@@ -3,9 +3,9 @@
 uint32_t FAT16FileReadWriter::offsetBytesToCluster(uint32_t offset) {
   uint32_t cluster = this->firstCluster;
   uint32_t remaining = offset;
-  while (remaining > 512) {
+  while (remaining > this->clusterSize) {
     cluster = this->backingFS->FAT1[this->firstCluster];
-    remaining -= 512;
+    remaining -= this->clusterSize;
   }
 
   return cluster;
@@ -17,28 +17,29 @@ FAT16FileReadWriter::FAT16FileReadWriter(uint32_t owner, uint32_t firstCluster, 
   this->sizeBytes = sizeBytes;
   this->currentPosition = 0;
   this->backingFS = backingFS;
+  this->clusterSize = 512 * (uint32_t)(*this->backingFS->sectorsPerCluster);
 }
 
 uint32_t FAT16FileReadWriter::read(uint32_t count, uint8_t* buffer) {
-  uint8_t* clusterBuffer = new uint8_t[512];
+  uint8_t* clusterBuffer = new uint8_t[this->clusterSize];
   uint32_t clusterToRead = offsetBytesToCluster(this->currentPosition);
   uint32_t sectorToRead = this->backingFS->clusterToSector(clusterToRead);
-  this->backingFS->backingDevice->seek(sectorToRead * 512);
-  this->backingFS->backingDevice->read(512, clusterBuffer);
+  this->backingFS->backingDevice->seek(sectorToRead * this->clusterSize);
+  this->backingFS->backingDevice->read(this->clusterSize, clusterBuffer);
 
-  uint32_t currentClusterIndex = this->currentPosition % 512;
+  uint32_t currentClusterIndex = this->currentPosition % this->clusterSize;
 
   uint32_t remaining = count;
 
   uint32_t index = 0;
   while (remaining) {
-    if (currentClusterIndex == 512) {
+    if (currentClusterIndex == this->clusterSize) {
       clusterToRead = this->backingFS->FAT1[clusterToRead];
       if (clusterToRead == 0xffff)
         break;
       sectorToRead = this->backingFS->clusterToSector(clusterToRead);
-      this->backingFS->backingDevice->seek(sectorToRead * 512);
-      this->backingFS->backingDevice->read(512, clusterBuffer);
+      this->backingFS->backingDevice->seek(sectorToRead * this->clusterSize);
+      this->backingFS->backingDevice->read(this->clusterSize, clusterBuffer);
       currentClusterIndex = 0;
     }
 
@@ -91,7 +92,7 @@ bool FAT16FS::pathEntryTo83(PathEntry pe, char* buffer) {
 }
 
 uint32_t FAT16FS::clusterToSector(uint32_t cluster) {
-  return cluster + (*sectorsPerFAT * *countFATs) + (*countRDEs / 16) + (*countReserved - 1) - 1;
+  return (cluster * (uint32_t)(*this->sectorsPerCluster)) + (*sectorsPerFAT * *countFATs) + (*countRDEs / 16) + (*countReserved - 1) - 1;
 }
 
 void FAT16FS::load_file(uint32_t location, uint8_t* destination) {
@@ -100,9 +101,9 @@ void FAT16FS::load_file(uint32_t location, uint8_t* destination) {
   bool loaded = false;
   while (!loaded) {
     uint16_t fromSector = clusterToSector(location);
-    this->backingDevice->seek(fromSector * 512);
-    this->backingDevice->read(512, destination+offset);
-    offset += 512;
+    this->backingDevice->seek(fromSector * 512 * *this->sectorsPerCluster);
+    this->backingDevice->read(512 * *this->sectorsPerCluster, destination+offset);
+    offset += 512 * *this->sectorsPerCluster;
 
     location = FAT1[location++];
     if (location == 0xffff)
@@ -116,7 +117,7 @@ uint32_t FAT16FS::calc_size(uint32_t location) {
   bool loaded = false;
   while (!loaded) {
     uint16_t fromSector = clusterToSector(location);
-    offset += 512;
+    offset += 512 * *this->sectorsPerCluster;
 
     location = FAT1[location++];
     if (location == 0xffff)
@@ -349,7 +350,7 @@ uint32_t FAT16FS::getDentsSize(Path p) {
   uint32_t found = 0;
   uint32_t count = xnoe::get<1>(directory);
 
-  found += 4;
+  found += sizeof(FSDirectoryListing);
   for (int i=0; i<count; i++) {
     if (directoryEntries[i].name[0] != 0 && directoryEntries[i].name[0] != 0xE5 && !directoryEntries[i].volumeid) {
       found += sizeof(FSDirectoryEntry);
@@ -375,9 +376,10 @@ void FAT16FS::getDents(Path p, FSDirectoryListing* buffer) {
   uint32_t written=0;
 
   buffer->count = getRealCount(directoryEntries, count);
+  buffer->stringsLength = 0;
 
   char* nameBuffer = ((char*)buffer);
-  nameBuffer += sizeof(FSDirectoryEntry)*buffer->count + 4;
+  nameBuffer += sizeof(FSDirectoryEntry)*buffer->count + sizeof(FSDirectoryListing);
   
   for (int i=0; i<count; i++) {
     if (directoryEntries[i].name[0] != 0 && directoryEntries[i].name[0] != 0xE5 && !directoryEntries[i].volumeid) {
@@ -387,6 +389,7 @@ void FAT16FS::getDents(Path p, FSDirectoryListing* buffer) {
         directoryEntries[i].size
       };
       written++;
+      buffer->stringsLength += 13;
     }
   }
 

@@ -1,14 +1,10 @@
 #ifndef ATA_PIO
 #define ATA_PIO
 
-#include <stdbool.h>
-
 #include "io.h"
 #include "types.h"
 #include "strings.h"
-#include "allocate.h"
 #include "global.h"
-#include "ioport.h"
 
 #include "stdio/readwriter.h"
 

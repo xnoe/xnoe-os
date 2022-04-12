@@ -171,29 +171,29 @@ void awaken(frame_struct* frame, Process* p) {
 
 void syscall(frame_struct* frame) {
   // Syscall ABI:
-  // 0: X
-  // 1: X
-  // 2: X
-  // 3: X
-  // 4: localalloc: LocalAlloc: Allocate under current process (in esi: size; out eax void* ptr)
-  // 5: localdelete: LocalDelete: Deallocate under current process (in esi: pointer)
+  // 0: getDentsSize :: char* path -> uint32_t size
+  // 1: getDents :: char* path -> uint8_t* buffer -> void
+  // 2: exists :: char* path -> bool
+  // 3: type :: char* path -> FSType
+  // 4: localalloc :: uint32_t size -> void* ptr
+  // 5: localdelete :: void* ptr -> void
   // 6: X
-  // 7: fork :: void* filehandler esi -> int PID // Spawns a process and returns its PID.
+  // 7: exec :: void* filehandler -> int PID // Spawns a process and returns its PID.
   // 8: getPID: returns the current process's PID (out eax: uint32_t)
-  // 9: getFileHandler :: char* path esi -> void* eax // Returns a file handlers for a specific file
-  // 10: read :: uint32_t count ebx -> void* filehandler esi -> uint8_t* outputbuffer edi -> int read // Reads from a file handler in to a buffer, returns successful read
-  // 11: write :: uint32_t count ebx -> void* filehandler esi -> uint8_t* inputbuffer edi -> int written // Reads from a buffer in to a file, returns successful written
+  // 9: getFileHandler :: char* path -> void* // Returns a file handlers for a specific file
+  // 10: read :: uint32_t count -> void* filehandler -> uint8_t* outputbuffer -> int read // Reads from a file handler in to a buffer, returns successful read
+  // 11: write :: uint32_t count -> void* filehandler -> uint8_t* inputbuffer -> int written // Reads from a buffer in to a file, returns successful written
   // 12: bindToKeyboard :: void -> void // Binds the current process's stdout to the keyboard.
   
-  // 13: bindStdout :: int PID esi -> int filehandler // Returns a filehandler for a CircularRWBuffer binding stdout of another process.
-  // 14: bindStdin :: int PID esi -> int filehandler // Returns a filehandler for a CircularRWBuffer binding stdin of another process.
+  // 13: bindStdout :: int PID -> int filehandler // Returns a filehandler for a CircularRWBuffer binding stdout of another process.
+  // 14: bindStdin :: int PID -> int filehandler // Returns a filehandler for a CircularRWBuffer binding stdin of another process.
 
-  // 15: fopen :: char* path esi -> int filehandler // Returns a filehandler to the file.
-  // 16: fclose :: int filehandler esi -> void // Closes a file handler.
+  // 15: fopen :: char* path -> int filehandler // Returns a filehandler to the file.
+  // 16: fclose :: int filehandler -> void // Closes a file handler.
 
-  // 17: kill :: int PID esi -> void // Destroys a process.
+  // 17: kill :: int PID -> void // Destroys a process.
 
-  // 18: sleep :: int time ms esi -> void // Sleeps the current process for esi milliseconds.
+  // 18: sleep :: int time ms -> void // Sleeps the current process for time milliseconds.
 
   // File handlers:
   // 0: Stdout
@@ -207,12 +207,16 @@ void syscall(frame_struct* frame) {
 
   switch (frame->eax) {
     case 0:
+      rval = Global::kernel->rootfs->getDentsSize(createPathFromString(frame->ebx));
       break;
     case 1:
+      Global::kernel->rootfs->getDents(createPathFromString(frame->ebx), frame->ecx);
       break;
     case 2:
+      rval = Global::kernel->rootfs->exists(createPathFromString(frame->ebx));
       break;
     case 3:
+      rval = Global::kernel->rootfs->type(createPathFromString(frame->ebx));
       break;
     case 4:
       rval = currentProc->allocate(frame->ebx);
