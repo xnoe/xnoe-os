@@ -58,3 +58,48 @@ int int_to_hex(unsigned int number, char* string_buffer) {
   }
   return (index+1);
 }
+
+void printf(const char* string, ...) {
+  va_list ptr;
+  va_start(ptr, string);
+
+  int index = 0;
+  char current;
+
+  while (current=string[index++]) {
+    if (current == '%') {
+      int type = string[index++];
+      int offset;
+      switch (type) {
+        case 'd': {
+          char decimal_buffer[11];
+          offset = int_to_decimal(va_arg(ptr, int), decimal_buffer);
+          printf(decimal_buffer + offset);
+          break;
+        }
+        case 'x': {
+          char hex_buffer[8];
+          offset = int_to_hex(va_arg(ptr, int), hex_buffer);
+          printf(hex_buffer);
+          break;
+        }
+        case 's': {
+          printf(va_arg(ptr, const char*));
+          break;
+        }
+        case 'c': {
+          int promoted = va_arg(ptr, int);
+          char charred = promoted;
+          
+          write(1, 0, &charred);
+          break;
+        }
+      }
+      continue;
+    }
+      
+    write(1, 0, &current);
+  }
+
+  va_end(ptr);
+}

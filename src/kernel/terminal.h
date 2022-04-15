@@ -31,7 +31,7 @@ class Terminal: public ReadWriter {
 private:
   virtual void update();
   virtual void update_cur();
-  virtual void putchar_internal(uint32_t ptr, uint8_t c);
+  virtual void putchar_internal(uint32_t ptr, uint8_t c, uint8_t edata);
 
   void scroll_up(uint32_t count=1);
   void scroll_down(uint32_t count=1);
@@ -81,7 +81,7 @@ class TextModeTerminal : public Terminal {
 private:
   void update() override;
   void update_cur() override;
-  void putchar_internal(uint32_t ptr, uint8_t c) override;
+  void putchar_internal(uint32_t ptr, uint8_t c, uint8_t edata) override;
 
   uint16_t* text_mode_pointer;
 public:
@@ -93,7 +93,7 @@ class VGAModeTerminal : public Terminal {
 private:
   void update() override;
   void update_cur() override;
-  void putchar_internal(uint32_t ptr, uint8_t c) override;
+  void putchar_internal(uint32_t ptr, uint8_t c,uint8_t edata) override;
 
   void put_pixel(uint32_t x, uint32_t y, uint8_t color);
   void put_pixels_byte(uint32_t x, uint32_t y, uint8_t color, uint8_t pixel_byte);

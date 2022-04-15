@@ -2,7 +2,7 @@
 
 _start:
   call main
-_loop:
-  jmp _loop
+  call die
 
+extern die
 extern main

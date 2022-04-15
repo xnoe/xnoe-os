@@ -70,6 +70,7 @@ void writeStrToBuf(char* c, procbuffer* b) {
 }
 
 void displayBuf(procbuffer* b, int dx, int dy) {
+  print("\x1b[42;36;1m");
   char pset[9] = "\x1b[00;00H";
   for (int i=0; i<dy;i++) {
     pset[3]++;
@@ -182,7 +183,6 @@ int main() {
   write(90, 0, bottom);
   for (int i=0; i<90;i++)
     write(1, 0, &plus);
-  print("\x1b[42;36;1m");
 
   uint32_t program = fopen("/hello.bin");
   uint32_t p1 = exec(program);
@@ -229,6 +229,7 @@ int main() {
     if (read(1, 1, c)) {
       if (c[0] == ':') {
         char buf[32] = {0};
+        print("\x1b[45;33;1m");
         print("\x1b[59;2H");
         print(":                                ");
         print("\x1b[59;3H");

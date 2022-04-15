@@ -17,21 +17,32 @@
 #include "filesystem/fat16.h"
 #include "filesystem/devfs.h"
 
-int main() {
+struct KernelInformationStruct {
+  PDE* pde;
+  uint32_t page_directory_phys_addr;
+  uint32_t page_directory_phys_offset;
+  uint32_t page_bitmap_phys;
+  uint32_t page_bitmap_virt;
+  uint32_t stack_ptr;
+  uint32_t vga_addr;
+  uint32_t remainingPages;
+};
+
+int main(KernelInformationStruct* kstruct) {
   init_gdt();
   
-  PageDirectory kernel_pd = PageDirectory(0xc0100000, 0x120000, 0xbffe0000);
+  PageDirectory kernel_pd = PageDirectory(kstruct->pde, kstruct->page_directory_phys_addr, kstruct->page_directory_phys_offset);
 
   kernel_pd.select();
   kernel_pd.unmap(0x8000);
 
-  PageMap phys_pm(0xc0600000);
-  PageMap virt_pm(0xc0620000);
+  PageMap phys_pm(kstruct->page_bitmap_phys, kstruct->remainingPages);
+  PageMap virt_pm(kstruct->page_bitmap_virt);
 
-  Kernel kernel = Kernel(&kernel_pd, &phys_pm, &virt_pm, 0xc0000000, 0xc1006000);
+  Kernel kernel = Kernel(&kernel_pd, &phys_pm, &virt_pm, 0xc0000000, kstruct->stack_ptr);
   kernel.init_kernel();
 
-  VGAModeTerminal* term = new VGAModeTerminal(0xc07a0000);
+  VGAModeTerminal* term = new VGAModeTerminal(kstruct->vga_addr);
 
   kernel.terminal = term;
 

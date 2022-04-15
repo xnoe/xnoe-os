@@ -20,6 +20,7 @@ namespace Global {
   extern tss_struct* tss;
   extern bool currentProcValid;
   extern xnoe::hashtable<void*, ReadWriter*>* FH;
+  extern uint32_t milliseconds_elapsed;
 }
 
 void* operator new (uint32_t size);

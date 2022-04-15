@@ -2,6 +2,7 @@
 #define COMMON_H
 
 #include "../kernel/types.h"
+#include <stdarg.h>
 
 typedef enum {
   File,
@@ -42,5 +43,6 @@ typedef struct {
 void print(char* string);
 int int_to_decimal(unsigned int number, char* string_buffer);
 int int_to_hex(unsigned int number, char* string_buffer);
+void printf(const char* string, ...);
 
 #endif

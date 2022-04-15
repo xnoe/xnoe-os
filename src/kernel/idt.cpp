@@ -26,7 +26,7 @@ void handle_fault(frame_struct* frame) {
   asm ("cli");
   uint32_t problem_address;
   asm ("mov %%cr2, %0" : "=a" (problem_address):);
-  Global::kernel->terminal->printf("(CS %x EIP %x): ", frame->cs, frame->eip);
+  Global::kernel->terminal->printf("\x1b[44;37;1m(CS %x EIP %x): ", frame->cs, frame->eip);
   switch (frame->gate) {
     case 0: // Divide by zero
       Global::kernel->terminal->printf("Divide by Zero");
@@ -58,10 +58,7 @@ void handle_fault(frame_struct* frame) {
     Global::kernel->destroyProcess(Global::currentProc);
     
     Global::currentProcValid = false;
-
-    // Go in to an infinite loop
-    asm ("sti");
-    while (1) asm ("hlt");
+    context_switch(frame);
   }
 }
 
@@ -121,7 +118,7 @@ void context_switch(frame_struct* frame) {
       }
     }
     Global::currentProc = processes->start->elem;
-  } while (Global::currentProc->state == Suspended);
+  } while (Global::currentProc->state != Running);
 
   
   // Select the next processes page directory
@@ -153,11 +150,13 @@ namespace Timer {
           current = current->next;
           timed_events.remove(prev);
           delete prev;
+          continue;
         }
       }
       current->elem = TimedEvent(count, xnoe::get<1>(t), xnoe::get<2>(t), xnoe::get<3>(t), xnoe::get<4>(t));
       current = current->next;
     }
+    Global::milliseconds_elapsed++;
   }
 
   void register_event(uint32_t milliseconds, void(*function)(frame_struct*, void*), void* auxiliary, bool oneshot=false) {
@@ -177,10 +176,10 @@ void syscall(frame_struct* frame) {
   // 3: type :: char* path -> FSType
   // 4: localalloc :: uint32_t size -> void* ptr
   // 5: localdelete :: void* ptr -> void
-  // 6: X
+  // 6: getMillisecondsElapsed :: void -> uint32_t
   // 7: exec :: void* filehandler -> int PID // Spawns a process and returns its PID.
   // 8: getPID: returns the current process's PID (out eax: uint32_t)
-  // 9: getFileHandler :: char* path -> void* // Returns a file handlers for a specific file
+  // 9: die :: destroys the current process void -> void
   // 10: read :: uint32_t count -> void* filehandler -> uint8_t* outputbuffer -> int read // Reads from a file handler in to a buffer, returns successful read
   // 11: write :: uint32_t count -> void* filehandler -> uint8_t* inputbuffer -> int written // Reads from a buffer in to a file, returns successful written
   // 12: bindToKeyboard :: void -> void // Binds the current process's stdout to the keyboard.
@@ -225,6 +224,7 @@ void syscall(frame_struct* frame) {
       currentProc->deallocate(frame->ebx);
       break;
     case 6:
+      rval = Global::milliseconds_elapsed;
       break;
     case 7: {
       asm("cli");
@@ -238,6 +238,13 @@ void syscall(frame_struct* frame) {
       break;
     
     case 9:
+      Global::kernel->PD->select();
+
+      // We can now safely delete the current process
+      Global::kernel->destroyProcess(Global::currentProc);
+      
+      Global::currentProcValid = false;
+      context_switch(frame);
       break;
 
     case 10: {
@@ -347,6 +354,13 @@ void syscall(frame_struct* frame) {
       context_switch(frame);
       break;
     }
+
+    case 19:
+      rval = Global::kernel->phys->remainingPages;
+      break;
+    case 20:
+      rval = Global::kernel->phys->initPages;
+      break;
 
     default:
       break;

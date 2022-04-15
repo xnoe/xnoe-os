@@ -56,4 +56,9 @@ struct __attribute__((packed)) idt_desc {
   uint32_t offset;
 };
 
+void context_switch(frame_struct* frame);
+void handle_fault(frame_struct* frame);
+void syscall(frame_struct* frame);
+void ignore_interrupt(frame_struct* frame);
+
 #endif

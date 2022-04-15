@@ -7,6 +7,7 @@ namespace Global {
   tss_struct* tss = 0;
   bool currentProcValid = false;
   xnoe::hashtable<void*, ReadWriter*>* FH; // Map of File Handlers -> Read Writer
+  uint32_t milliseconds_elapsed = 0;
 }
 
 void* operator new (uint32_t size) {

@@ -10,8 +10,9 @@ void memcpy(uint8_t* src, uint8_t* dst, uint32_t count) {
     dst[i] = src[i];
 }
 
-PageMap::PageMap(uint32_t map) {
+PageMap::PageMap(uint32_t map, uint32_t remainingPages) {
   this->pagemap = (uint8_t*)map;
+  this->initPages = this->remainingPages = remainingPages;
 }
 
 PageMap::PageMap() {
@@ -38,6 +39,8 @@ void PageMap::unset_bit(uint32_t index) {
 }
 
 bool PageMap::bit_set(uint32_t index) {
+  if (!index)
+    return false;
   uint32_t offset = index % 8;
   uint32_t i = index / 8;
 
@@ -46,20 +49,24 @@ bool PageMap::bit_set(uint32_t index) {
 
 void PageMap::mark_unavailable(uint32_t address) {
   unset_bit(address >> 12);
+  this->remainingPages--;
 }
 
 void PageMap::mark_unavailable(uint32_t address, uint32_t count) {
   for (int i=0; i<count; i++)
     unset_bit((address >> 12) + i);
+  this->remainingPages -= count;
 }
 
 void PageMap::mark_available(uint32_t address) {
   set_bit(address >> 12);
+  this->remainingPages++;
 }
 
 void PageMap::mark_available(uint32_t address, uint32_t count) {
   for (int i=0; i<count; i++)
     set_bit((address >> 12) + i);
+  this->remainingPages += count;
 }
 
 bool PageMap::available(uint32_t address) {
@@ -91,6 +98,7 @@ PageTable::PageTable(uint32_t phys, uint32_t virt) {
   virt_addr = virt;
 
   page_table = (PTE*)virt;
+  valid = 1;
 }
 
 PageTable::PageTable(){
@@ -100,6 +108,7 @@ PageTable::PageTable(){
   phys_addr = (Global::allocator->virtual_to_physical(virt_addr)) >> 12;
 
   page_table = (PTE*)virt_addr;
+  valid = 1;
 }
 
 PageTable::~PageTable() {
@@ -149,7 +158,7 @@ PageDirectory::PageDirectory(PDE* page_directory, uint32_t phys_addr, uint32_t o
 
   for (int i=0; i<1024; i++) {
     uint32_t table_phys_addr = page_directory[i].getPhysicalPTAddress();
-    new (page_tables + i) PageTable(table_phys_addr >> 12, table_phys_addr + offset);
+    new (&page_tables[i]) PageTable(table_phys_addr >> 12, table_phys_addr + offset);
   }
 }
 
@@ -165,7 +174,7 @@ PageDirectory::PageDirectory() {
 
 PageDirectory::~PageDirectory() {
   for (int i=0; i<1024; i++)
-    if (page_tables[i].virt_addr)
+    if (page_tables[i].valid)
       page_tables[i].~PageTable();
   delete page_directory;
 }
@@ -173,8 +182,8 @@ PageDirectory::~PageDirectory() {
 void PageDirectory::map(uint32_t phys, uint32_t virt, uint8_t privilege) {
   split_addr* split = (split_addr*)&virt;
 
-  if (!page_tables[split->pd_index].virt_addr)
-    new (page_tables + split->pd_index) PageTable();
+  if (!page_tables[split->pd_index].valid)
+    new (&page_tables[split->pd_index]) PageTable();
 
   page_directory[split->pd_index] = (PDE){
     .present = 1,

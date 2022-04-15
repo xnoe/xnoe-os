@@ -86,6 +86,7 @@ Process::Process(uint32_t PID, PageDirectory* inherit, uint32_t inheritBase, uin
 
     this->kernelStackPtr = stack32;
 
+    filereader->seek(0);
     filereader->read(filesize, program_data);
 
     asm ("mov %0, %%cr3" : : "r" (pCR3));
@@ -101,11 +102,8 @@ Process::~Process() {
     xnoe::linkedlistelem<AllocTracker>* active = next;
     next = next->next;
 
-    //printf("Deleted %x\n", active->elem.page_base);
-
-    this->deallocate(active->elem.page_base+1);
+    this->deallocate(active->elem.page_base);
   }
-  this->deallocate(stack);
   asm ("mov %0, %%cr3" : : "r" (pCR3));
   delete kernelStackPtr;
 }

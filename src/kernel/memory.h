@@ -8,7 +8,7 @@
 void memset(uint8_t* address, uint32_t count, uint8_t value);
 void memcpy(uint8_t* src, uint8_t* dst, uint32_t count);
 
-class __attribute__((packed)) PageMap {
+class PageMap {
 private:
   uint8_t* pagemap;
 
@@ -18,7 +18,10 @@ private:
   bool bit_set(uint32_t index);
 
 public:
-  PageMap(uint32_t map);
+  uint32_t remainingPages;
+  uint32_t initPages;
+
+  PageMap(uint32_t map, uint32_t remainingPages=0x100000);
   PageMap();
 
   ~PageMap();
@@ -40,6 +43,8 @@ struct PageTable {
 
   uint32_t phys_addr;
   uint32_t virt_addr;
+  uint32_t valid = 0;
+  uint32_t reserved;
 
   PageTable(uint32_t phys, uint32_t virt);
   PageTable();
@@ -77,12 +82,12 @@ public:
 
 class Allocator {
 protected:
-  static PageMap* phys;
-  PageMap* virt;
-
   uint32_t virt_alloc_base;
   uint8_t privilege;
 public:
+  static PageMap* phys;
+  PageMap* virt;
+
   PageDirectory* PD;
 
   Allocator(PageDirectory* page_directory, PageMap* phys, PageMap* virt, uint32_t virt_alloc_base);
@@ -92,6 +97,8 @@ public:
 
   virtual void* allocate(uint32_t size);
   virtual void deallocate(uint32_t virt_addr);
+
+  void* getMappingOf(uint32_t phys_addr, uint32_t length_pages);
 
   uint32_t virtual_to_physical(uint32_t virt);
 };

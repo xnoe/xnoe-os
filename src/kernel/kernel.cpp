@@ -12,8 +12,6 @@ Kernel::Kernel(PageDirectory* page_directory, PageMap* phys, PageMap* virt, uint
   this->stack = stack;
 
   this->lastFH = 8;
-
-  //this->processes.append(this);
 }
 
 void Kernel::init_kernel() {
@@ -54,7 +52,3 @@ int Kernel::mapFH(ReadWriter* fh) {
 void Kernel::unmapFH(uint32_t fh) {
   Global::FH->remove((void*)fh);
 }
-
-//void Kernel::loadPrimaryStack() {
-//  asm volatile("mov %0, %%esp"::"m"(this->stack - 64));
-//}

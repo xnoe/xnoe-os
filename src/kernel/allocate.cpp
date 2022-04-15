@@ -8,12 +8,6 @@ uint32_t kernel_allocate_area = 0xf0000000;
 
 uint32_t last_free_page = 0;
 
-/*void init_allocator() {
-  for (int i=0; i<1024; i++) {
-    kernel_page_tables[i] = 0xc0101000 + 0x1000*i;
-  }
-}*/ // Don't do this.
-
 void set_bit(uint32_t offset, uint8_t* buffer) {
   uint32_t index = offset / 8;
   uint32_t bit = offset % 8;

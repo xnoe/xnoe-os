@@ -32,7 +32,7 @@ void Terminal::scroll_up(uint32_t count) {
     // Clear the last line
     uint16_t* last_line = buffer + (height * pages - 1) * width;
     for (int x = 0; x < width; x++) {
-      last_line[x] = 0x20 | (edata << 8);
+      last_line[x] = 0x0720; //| (edata << 8);
     }
     this->cur_y--;
   }
@@ -54,7 +54,7 @@ void Terminal::scroll_down(uint32_t count) {
     // Clear the last line
     uint16_t* last_line = buffer + (height * (pages - 1)) * width;
     for (int x = 0; x < width; x++) {
-      last_line[x] = 0x20 | (edata << 8);
+      last_line[x] = 0x0720;// | (edata << 8);
     }
     this->cur_y--;
   }
@@ -85,7 +85,7 @@ void Terminal::putchar(uint8_t c) {
           }
           last_page_pointer[this->cur_y*this->width+this->cur_x] = ' ' | (edata<<8);
           if (active)
-            putchar_internal(this->cur_y*this->width+this->cur_x, ' ');
+            putchar_internal(this->cur_y*this->width+this->cur_x, ' ',this->edata);
           break;
         default:
           if (this->cur_x == this->width) {
@@ -96,7 +96,7 @@ void Terminal::putchar(uint8_t c) {
           last_page_pointer[this->cur_y*this->width+this->cur_x] = c | (edata<<8);
 
           if (active)
-            putchar_internal(this->cur_y*this->width+this->cur_x, c);
+            putchar_internal(this->cur_y*this->width+this->cur_x, c, this->edata);
           this->cur_x++;
           break;
       }
@@ -218,7 +218,7 @@ void Terminal::putchar(uint8_t c) {
 
 void Terminal::update(){}
 void Terminal::update_cur(){}
-void Terminal::putchar_internal(uint32_t ptr, uint8_t c) {}
+void Terminal::putchar_internal(uint32_t ptr, uint8_t c, uint8_t edata) {}
 
 Terminal::Terminal(uint32_t width, uint32_t height, uint32_t pages)
 : ReadWriter(0) {
@@ -346,7 +346,7 @@ void TextModeTerminal::update_cur() {
   outb(0x3D5, cursor_position_split[1]);
 }
 
-void TextModeTerminal::putchar_internal(uint32_t ptr, uint8_t c) {
+void TextModeTerminal::putchar_internal(uint32_t ptr, uint8_t c, uint8_t edata) {
   text_mode_pointer[ptr] = c | (edata << 8);
 }
 
@@ -357,7 +357,7 @@ TextModeTerminal::TextModeTerminal(uint16_t* text_mode_pointer): Terminal(80, 25
 void VGAModeTerminal::update() {
   for (int y = 0; y < height; y++) {
     for (int x = 0; x < width; x++) {
-      putchar_internal(y * width + x, (uint8_t)(current_page_pointer[y * width + x]));
+      putchar_internal(y * width + x, (uint8_t)(current_page_pointer[y * width + x]), (uint8_t)(current_page_pointer[y * width + x]>>8));
     }
   }
 }
@@ -366,7 +366,7 @@ void VGAModeTerminal::update_cur() {
   // Todo: Implement cursor for VGAModeTerminal
 }
 
-void VGAModeTerminal::putchar_internal(uint32_t ptr, uint8_t c) {
+void VGAModeTerminal::putchar_internal(uint32_t ptr, uint8_t c, uint8_t edata) {
   uint32_t col = ptr % width;
   uint32_t row = ptr / width;
 

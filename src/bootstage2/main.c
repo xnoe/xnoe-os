@@ -46,6 +46,17 @@ void mark_unavailble(uint32_t address, uint32_t size, uint8_t* buffer) {
   }
 }
 
+typedef struct {
+  PDE* pde;
+  uint32_t page_directory_phys_addr;
+  uint32_t page_directory_phys_offset;
+  uint32_t page_bitmap_phys;
+  uint32_t page_bitmap_virt;
+  uint32_t stack_ptr;
+  uint32_t vga_addr;
+  uint32_t remainingPages;
+} KernelInformationStruct;
+
 void main() {
   init_atapio();
 
@@ -55,6 +66,7 @@ void main() {
   // Zero out the bitmap.
   memset(bitmap, 0x20000, 0);
   // Ensure the bitmap data is clear
+  uint32_t pages;
 
   for (int i=0; e820_entries[i].length_low != 0 || e820_entries[i].length_high != 0; i++) {
     e820entry entry = e820_entries[i];
@@ -74,6 +86,7 @@ void main() {
       }
     }
     uint32_t page_index = base / 4096;
+    pages += length / 4096;
 
     for (int j=0; length > 4096; length -= 4096, j++) {
       set_bit(page_index + j, bitmap);
@@ -81,6 +94,7 @@ void main() {
   }
 
   mark_unavailble(bitmap, 0x20000, bitmap);
+  mark_unavailble(0, 0xFFFFF, bitmap);
 
   // Page Directory
   PDE* kernel_page_directory = bitmap + 0x20000;
@@ -168,6 +182,20 @@ void main() {
        "mov %%cr0, %%eax;"
        "or $0x80000000, %%eax;"
        "mov %%eax, %%cr0" : : "m" (kernel_page_directory));
+  
+  KernelInformationStruct* kstruct = 0xc1000000 + 16*0x1000 - sizeof(KernelInformationStruct);
+  *kstruct = (KernelInformationStruct){
+    .pde = 0xc0100000,
+    .page_directory_phys_addr = kernel_page_directory,
+    .page_directory_phys_offset = 0xc0100000 - (uint32_t)kernel_page_directory,
+    .page_bitmap_phys = 0xc0600000,
+    .page_bitmap_virt = 0xc0620000,
+    .stack_ptr = 0xc1000000 + 16*0x1000 - sizeof(KernelInformationStruct) - 4,
+    .vga_addr = 0xc07a0000,
+    .remainingPages = pages
+  };
 
-  ((void(*)(void))0xc0000000)();
+  *(uint32_t*)(0xc100a004) = kstruct;
+
+  ((void(*)())0xc0000000)();
 }
