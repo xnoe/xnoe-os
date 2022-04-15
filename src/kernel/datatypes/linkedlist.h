@@ -3,6 +3,7 @@
 
 #include "../types.h"
 #include "../memory.h"
+#include "../spinlock.h"
 
 namespace xnoe {
   template<typename T>
@@ -20,8 +21,9 @@ namespace xnoe {
 
   template<typename T>
   struct linkedlist {
-    xnoe::linkedlistelem<T>* start;
-    xnoe::linkedlistelem<T>* end;
+    xnoe::linkedlistelem<T>* start=0;
+    xnoe::linkedlistelem<T>* end=0;
+    Spinlock lock = Spinlock();
 
     bool has(T t) {
       xnoe::linkedlistelem<T>* current = this->start;
@@ -49,6 +51,7 @@ namespace xnoe {
     }
 
     void append(xnoe::linkedlistelem<T>* llelem) {
+      lock.lock();
       if (this->start && this->end) {
         this->end->next = llelem;
         llelem->prev = this->end;
@@ -58,6 +61,7 @@ namespace xnoe {
         this->start = llelem;
         this->end = llelem;
       }
+      lock.unlock();
     }
 
     void prepend(T t) {
@@ -66,6 +70,7 @@ namespace xnoe {
     }
 
     void prepend(xnoe::linkedlistelem<T>* llelem) {
+      lock.lock();
       if (this->start && this->end) {
         this->start->prev = llelem;
         llelem->next = this->start;
@@ -75,14 +80,17 @@ namespace xnoe {
         this->start = llelem;
         this->end = llelem;
       }
+      lock.unlock();
     }
 
     void insert(linkedlist<T>* ll, uint32_t index) {
+      lock.lock();
       linkedlistelem<T>* current = this->start;
       for (int i=0; i<index; i++, current = current->next);
 
       current->next->prev = ll->end;
       current->next = ll->start;
+      lock.unlock();
     }
 
     /*void remove(uint32_t index) {
@@ -96,6 +104,7 @@ namespace xnoe {
     }*/
 
     void remove(linkedlistelem<T>* elem) {
+      lock.lock();
       linkedlistelem<T>* current = start;
       while (current) {
         if (current == elem) {
@@ -111,13 +120,16 @@ namespace xnoe {
           if (current = end)
             end = current->prev;
 
+          lock.unlock();
           return;
         }
         current = current->next;
       }
+      lock.unlock();
     }
 
     void remove(T elem) {
+      lock.lock();
       linkedlistelem<T>* current = start;
       while (current) {
         if (current->elem == elem) {
@@ -135,10 +147,12 @@ namespace xnoe {
           
           delete current;
 
+          lock.unlock();
           return;
         }
         current = current->next;
       }
+      lock.unlock();
     }
   };
 }

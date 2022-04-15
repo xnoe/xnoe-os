@@ -26,7 +26,7 @@ void handle_fault(frame_struct* frame) {
   asm ("cli");
   uint32_t problem_address;
   asm ("mov %%cr2, %0" : "=a" (problem_address):);
-  Global::kernel->terminal->printf("\x1b[44;37;1m(CS %x EIP %x): ", frame->cs, frame->eip);
+  /*Global::kernel->terminal->printf("\x1b[44;37;1m(CS %x EIP %x): ", frame->cs, frame->eip);
   switch (frame->gate) {
     case 0: // Divide by zero
       Global::kernel->terminal->printf("Divide by Zero");
@@ -44,13 +44,13 @@ void handle_fault(frame_struct* frame) {
       Global::kernel->terminal->printf("Unkown Fault!");
       break;
   } 
-  Global::kernel->terminal->printf(" Error Code: %x\n", frame->errcode);
+  Global::kernel->terminal->printf(" Error Code: %x\n", frame->errcode);*/
   if (!(frame->cs & 3)) {
     Global::kernel->terminal->printf("[FATAL] Kernel Fault!!!\n");
     while (1) asm("hlt");
   } else {
     // Print an error message.
-    Global::kernel->terminal->printf("PID %d Terminated due to fault!\n", Global::currentProc->PID);
+    //Global::kernel->terminal->printf("PID %d Terminated due to fault!\n", Global::currentProc->PID);
     asm volatile ("mov %0, %%esp" ::"m"(Global::kernel->globalISRStack));
     Global::kernel->PD->select();
 

@@ -74,6 +74,7 @@ bool ATA::validDevice() {
 }
 
 void ATA::ATARead(uint32_t sector, uint8_t* buffer) {
+  driveLock.lock();
   DriveSelectRegister.writeb(0xE0 | ((sector >> 24) & 0xf));
   SectorCountRegister.writeb(1);
   LBALo.writeb((uint8_t)sector);
@@ -83,9 +84,11 @@ void ATA::ATARead(uint32_t sector, uint8_t* buffer) {
   pollTillNotBSY();
   for (int i=0; i<256; i++)
     ((uint16_t*)buffer)[i] = DataRegister.readw();
+  driveLock.unlock();
 }
 
 void ATA::ATAWrite(uint32_t sector, uint8_t* buffer) {
+  driveLock.lock();
   DriveSelectRegister.writeb(0xE0 | ((sector >> 24) & 0xf));
   SectorCountRegister.writeb(1);
   LBALo.writeb((uint8_t)sector);
@@ -96,6 +99,7 @@ void ATA::ATAWrite(uint32_t sector, uint8_t* buffer) {
   for (int i=0; i<256; i++)
     DataRegister.writew(((uint16_t*)buffer)[i]);
   CommandRegister.writeb(0xe7);
+  driveLock.unlock();
 }
 
 ATAReadWriter::ATAReadWriter(uint32_t owner, uint32_t bus): 
@@ -105,6 +109,7 @@ ReadWriter(owner) {
 }
 
 uint32_t ATAReadWriter::read(uint32_t count, uint8_t* buffer) {
+  driveLock.lock();
   uint32_t remainingBytes = count;
   uint32_t inThisSector = currentPosition % 512;
 
@@ -125,9 +130,11 @@ uint32_t ATAReadWriter::read(uint32_t count, uint8_t* buffer) {
     }
     c++;
   }
+  driveLock.unlock();
   return c;
 }
 uint32_t ATAReadWriter::write(uint32_t count, uint8_t* buffer) {
+  driveLock.lock();
   uint32_t remainingBytes = count;
   uint32_t inThisSector = currentPosition % 512;
 
@@ -151,6 +158,7 @@ uint32_t ATAReadWriter::write(uint32_t count, uint8_t* buffer) {
   }
   // Perform a final write to ensure that we've written everything to disk.
   ATAWrite((currentPosition / 512), sectorBuffer);
+  driveLock.unlock();
   return c;
 }
 uint32_t ATAReadWriter::size() {

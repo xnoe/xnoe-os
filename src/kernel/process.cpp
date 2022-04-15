@@ -31,7 +31,7 @@ Process::Process(uint32_t PID)
   this->page_remaining = 0;
   this->last_page_pointer = 0;
   this->stack = this->allocate(0x8000);
-  this->kernelStackPtr = (new uint8_t[0x1000]) + 0x1000;
+  this->kernelStackPtr = (new uint8_t[0x4000]) + 0x4000;
   this->state = Running;
 }
 
@@ -57,7 +57,7 @@ Process::Process(uint32_t PID, PageDirectory* inherit, uint32_t inheritBase, uin
     uint8_t* program_data = this->allocate(filesize + 12) + 12;
 
     this->stack = this->allocate(0x8000);
-    this->kernelStackPtr = (new uint8_t[0x1000]) + 0xffc;
+    this->kernelStackPtr = (new uint8_t[0x4000]) + 0x4000;
     this->kernelStackPtrDefault = this->kernelStackPtr;
 
     uint32_t pCR3;

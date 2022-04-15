@@ -8,6 +8,8 @@
 
 #include "stdio/readwriter.h"
 
+#include "spinlock.h"
+
 // Bus 0
 // Control Ports: 1F0-1F7
 // DCR / Alt Status: 3F6
@@ -56,6 +58,7 @@ enum ATADriveType {
 class ATA {
 private:
   ATADriveType type;
+  Spinlock driveLock;
 protected:
   uint32_t bus;
 
@@ -93,6 +96,7 @@ class ATAReadWriter: public ReadWriter, public ATA {
 private:
   uint8_t sectorBuffer[512];
   uint32_t currentPosition;
+  Spinlock driveLock;
 
 public:
   ATAReadWriter(uint32_t owner, uint32_t bus);
